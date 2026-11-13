@@ -1,0 +1,17 @@
+{% extends 'layout.twig' %}
+{% block title %}Log in · {{ setting('site.name') }}{% endblock %}
+{% block content %}
+    <section class="panel narrow">
+        <h1 class="panel-title">Log in</h1>
+        {% if error %}<div class="flash flash-error">{{ error }}</div>{% endif %}
+        <form method="post" class="stack">
+            {{ csrf_field() }}
+            <input type="hidden" name="next" value="{{ next }}">
+            <label>Username or email <input name="login" value="{{ login }}" required autofocus autocomplete="username"></label>
+            <label>Password <input type="password" name="password" required autocomplete="current-password"></label>
+            {{ hook('login_form') }}
+            <button class="button">Log in</button>
+        </form>
+        {% if setting('site.registration_open') %}<p class="muted">New here? <a href="{{ url('register') }}">Create an account</a>.</p>{% endif %}
+    </section>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends 'layout.twig' %}
+{% block title %}{{ status == 404 ? 'Not found' : 'Error' }} · {{ setting('site.name') }}{% endblock %}
+{% block content %}
+    <section class="panel narrow">
+        <h1 class="panel-title">{{ status == 404 ? 'Page not found' : (status == 403 ? 'Not allowed' : 'Something went wrong') }}</h1>
+        <p>{{ message }}</p>
+        <p><a href="{{ url('home') }}">Back to the forums</a></p>
+    </section>
+{% endblock %}

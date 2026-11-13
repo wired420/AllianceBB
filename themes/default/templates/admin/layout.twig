@@ -1,0 +1,13 @@
+{% extends 'layout.twig' %}
+{% block title %}Admin · {{ setting('site.name') }}{% endblock %}
+{% block body_class %}admin{% endblock %}
+{% block content %}
+    <div class="admin-grid">
+        <nav class="admin-menu panel" aria-label="Admin">
+            {% for item in admin_menu %}
+                <a href="{{ item.url }}"{% if item.id == section %} class="active" aria-current="page"{% endif %}>{{ item.title }}</a>
+            {% endfor %}
+        </nav>
+        <div class="admin-body">{% block admin %}{% endblock %}</div>
+    </div>
+{% endblock %}

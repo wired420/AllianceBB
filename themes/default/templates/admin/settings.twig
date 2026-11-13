@@ -1,0 +1,21 @@
+{% extends 'admin/layout.twig' %}
+{% block admin %}
+    <section class="panel">
+        <h1 class="panel-title">Settings</h1>
+        <form method="post" class="stack">
+            {{ csrf_field() }}
+            <label>Site name <input name="site_name" value="{{ settings['site.name'] }}" required maxlength="60">
+                <small class="muted">Other sites show your users as user@{{ settings['site.name']|replace({' ': ''}) }}.</small></label>
+            <label>Description <input name="site_description" value="{{ settings['site.description'] }}" maxlength="300"></label>
+            <label class="check"><input type="checkbox" name="registration_open" value="1"{% if settings['site.registration_open'] %} checked{% endif %}> Anyone can sign up</label>
+            <fieldset>
+                <legend>Sharing with other AllianceBB sites</legend>
+                <label class="check"><input type="radio" name="federation_mode" value="public"{% if settings['federation.mode'] == 'public' %} checked{% endif %}> <span><strong>Public</strong> · any AllianceBB site can connect and clone your shareable sections</span></label>
+                <label class="check"><input type="radio" name="federation_mode" value="private"{% if settings['federation.mode'] == 'private' %} checked{% endif %}> <span><strong>Private</strong> · only sites you give a key to can connect</span></label>
+                <label class="check"><input type="radio" name="federation_mode" value="off"{% if settings['federation.mode'] == 'off' %} checked{% endif %}> <span><strong>Off</strong> · no sharing in either direction</span></label>
+            </fieldset>
+            {{ hook('admin.settings.form', settings) }}
+            <button class="button">Save settings</button>
+        </form>
+    </section>
+{% endblock %}

@@ -1,0 +1,8 @@
+{
+    "name": "signatures",
+    "title": "Signatures",
+    "description": "Example plugin: lets members add a signature that shows under each of their posts. Shows a migration, a form hook, a save hook and a render hook.",
+    "version": "1.0.0",
+    "requires": ">=0.1.0",
+    "main": "plugin.php"
+}

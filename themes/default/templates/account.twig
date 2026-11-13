@@ -1,0 +1,17 @@
+{% extends 'layout.twig' %}
+{% block title %}Your account · {{ setting('site.name') }}{% endblock %}
+{% block content %}
+    {% set user = app.ctx.user %}
+    <section class="panel narrow">
+        <h1 class="panel-title">Your account</h1>
+        {% if error %}<div class="flash flash-error">{{ error }}</div>{% endif %}
+        <p class="muted">Username: <strong>{{ user.username }}</strong> · {{ user.post_count }} posts · joined {{ user.created_at|date('M j, Y') }}</p>
+        <form method="post" class="stack">
+            {{ csrf_field() }}
+            <label>Display name <input name="display_name" value="{{ user.display_name }}" maxlength="64"></label>
+            <label>Avatar image link <input name="avatar_url" value="{{ user.avatar_url }}" placeholder="https://…"></label>
+            {{ hook('account_form', user) }}
+            <button class="button">Save</button>
+        </form>
+    </section>
+{% endblock %}

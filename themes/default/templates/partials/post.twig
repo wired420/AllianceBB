@@ -1,0 +1,29 @@
+{% set author = post|author %}
+<article class="post{% if post.is_remote ?? false %} remote{% endif %}" id="post-{{ post.id }}" data-post-id="{{ post.id }}">
+    <aside class="post-author">
+        {% if post.avatar_url %}<img class="avatar" src="{{ post.avatar_url }}" alt="" width="48" height="48" loading="lazy" referrerpolicy="no-referrer">
+        {% else %}<span class="avatar avatar-letter" aria-hidden="true">{{ author|first|upper }}</span>{% endif %}
+        <strong class="author-name">{{ author }}</strong>
+        {% if post.author_role in ['admin', 'moderator'] %}<span class="badge">{{ post.author_role|capitalize }}</span>{% endif %}
+        {{ hook('post.author', post) }}
+    </aside>
+    <div class="post-body">
+        <header class="post-meta muted small">
+            <a href="{{ url('post', {id: post.id}) }}">{{ post.created_at|ago }}</a>
+            {% if post.edited_at %} · edited {{ post.edited_at|ago }}{% endif %}
+            {{ hook('post.meta', post) }}
+        </header>
+        {{ hook('post.before', post) }}
+        <div class="post-content">{{ post.body_html|raw }}</div>
+        {{ hook('post.after', post) }}
+        <footer class="post-actions small">
+            {% if can('post.edit', post) %}<a href="{{ url('post.edit', {id: post.id}) }}">Edit</a>{% endif %}
+            {% if can('post.delete', post) %}
+                <form method="post" action="{{ url('post.delete', {id: post.id}) }}" class="inline" data-confirm="{{ post.id == topic.first_post_id ? 'Delete this whole topic?' : 'Delete this post?' }}">
+                    {{ csrf_field() }}<button class="link-button danger">Delete</button>
+                </form>
+            {% endif %}
+            {{ hook('post.actions', post) }}
+        </footer>
+    </div>
+</article>

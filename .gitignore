@@ -1,0 +1,6 @@
+/vendor/
+/var/
+/.env
+/plugins/.staging-*
+.phpunit.result.cache
+.DS_Store

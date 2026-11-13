@@ -1,0 +1,26 @@
+{% extends 'layout.twig' %}
+{% block title %}{{ category.title ?? setting('site.name') }}{% endblock %}
+{% block content %}
+    {{ hook('index.before') }}
+    {% if not category is defined %}
+        <p class="site-description muted">{{ setting('site.description') }}</p>
+    {% endif %}
+    {% for node in tree %}
+        {% if node.type == 'category' %}
+            <section class="panel category" id="node-{{ node.id }}">
+                <h2 class="panel-title"><a href="{{ url('forum', {id: node.id ~ '-' ~ node.slug}) }}">{{ node.title }}</a></h2>
+                {% if node.description %}<p class="muted panel-sub">{{ node.description }}</p>{% endif %}
+                {% for forum in node.children %}
+                    {% include 'partials/forum_row.twig' %}
+                {% else %}
+                    <p class="empty muted">No forums in this category yet.</p>
+                {% endfor %}
+            </section>
+        {% else %}
+            <section class="panel">{% include 'partials/forum_row.twig' with {forum: node} %}</section>
+        {% endif %}
+    {% else %}
+        <div class="panel empty">There are no forums yet. {% if can('admin.access') %}<a href="{{ url('admin.structure') }}">Create one</a>.{% endif %}</div>
+    {% endfor %}
+    {{ hook('index.after') }}
+{% endblock %}

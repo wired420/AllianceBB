@@ -1,0 +1,25 @@
+{
+    "name": "alliancebb/alliancebb",
+    "description": "Self-hosted forum software that shares categories, forums and sub-forums between sites in real time.",
+    "type": "project",
+    "license": "AGPL-3.0-or-later",
+    "require": {
+        "php": ">=8.3",
+        "ext-pdo": "*",
+        "ext-pdo_pgsql": "*",
+        "ext-mbstring": "*",
+        "ext-sodium": "*",
+        "twig/twig": "^3.14",
+        "league/commonmark": "^2.5"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.4"
+    },
+    "autoload": {
+        "psr-4": { "AllianceBB\\": "src/" }
+    },
+    "autoload-dev": {
+        "psr-4": { "AllianceBB\\Tests\\": "tests/" }
+    },
+    "config": { "sort-packages": true, "optimize-autoloader": true }
+}

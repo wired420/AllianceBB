@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ setting('site.name') }}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ theme_asset('style.css') }}">
+    {{ theme_css_vars() }}
+    {{ hook('head') }}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    {% set ctx = app.ctx %}
+    <header class="site-header">
+        <div class="wrap header-inner">
+            <a class="site-name" href="{{ url('home') }}">{{ setting('site.name') }}</a>
+            <nav class="user-nav">
+                {{ hook('nav.before') }}
+                {% if ctx and ctx.user %}
+                    {% if can('admin.access') %}<a href="{{ url('admin') }}">Admin</a>{% endif %}
+                    <a href="{{ url('account') }}">{{ ctx.user.display_name ?: ctx.user.username }}</a>
+                    <form method="post" action="{{ url('logout') }}" class="inline">{{ csrf_field() }}<button class="link-button">Log out</button></form>
+                {% else %}
+                    <a href="{{ url('login') }}">Log in</a>
+                    {% if setting('site.registration_open') %}<a class="button small" href="{{ url('register') }}">Sign up</a>{% endif %}
+                {% endif %}
+                {{ hook('nav.after') }}
+            </nav>
+        </div>
+    </header>
+    {{ hook('header.after') }}
+    <main class="wrap">
+        {% if ctx %}
+            {% for message in ctx.flash %}
+                <div class="flash flash-{{ message.type }}" role="status">{{ message.message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="site-footer wrap">
+        {{ hook('footer') }}
+        <p>{{ setting('site.name') }} · Powered by <a href="https://github.com/wired420/AllianceBB">AllianceBB</a></p>
+    </footer>
+    <script>window.ABB_LIVE = {{ live_config()|json_encode|raw }};</script>
+    <script src="{{ theme_asset('live.js') }}" defer></script>
+    {{ hook('body.end') }}
+</body>
+</html>

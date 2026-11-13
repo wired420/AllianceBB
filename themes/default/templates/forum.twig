@@ -1,0 +1,33 @@
+{% extends 'layout.twig' %}
+{% block title %}{{ node.title }} · {{ setting('site.name') }}{% endblock %}
+{% block content %}
+    {% include 'partials/breadcrumbs.twig' %}
+    <div class="page-head">
+        <div>
+            <h1>{{ node.title }}</h1>
+            {% if node.description %}<p class="muted">{{ node.description }}</p>{% endif %}
+            {{ hook('forum.head', node) }}
+        </div>
+        {% if can('topic.create', node) %}
+            <a class="button" href="{{ url('topic.new', {id: node.id}) }}">New topic</a>
+        {% elseif not app.ctx.user %}
+            <a class="button secondary" href="{{ url('login') }}?next=/forum/{{ node.id }}">Log in to post</a>
+        {% endif %}
+    </div>
+
+    {% if subforums is not empty %}
+        <section class="panel">
+            <h2 class="panel-title">Sub-forums</h2>
+            {% for forum in subforums %}{% include 'partials/forum_row.twig' %}{% endfor %}
+        </section>
+    {% endif %}
+
+    <section class="panel topic-list" data-live-channel="node/{{ node.id }}">
+        {% for topic in topics %}
+            {% include 'partials/topic_row.twig' %}
+        {% else %}
+            <p class="empty muted" data-empty>No topics yet. Start the first one.</p>
+        {% endfor %}
+    </section>
+    {% include 'partials/pagination.twig' %}
+{% endblock %}

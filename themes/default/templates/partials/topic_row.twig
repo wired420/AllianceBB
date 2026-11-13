@@ -1,0 +1,14 @@
+<div class="topic-row{% if topic.pinned %} pinned{% endif %}" id="topic-row-{{ topic.id }}" data-topic-id="{{ topic.id }}">
+    <div class="topic-main">
+        {% if topic.pinned %}<span class="badge">Pinned</span>{% endif %}
+        {% if topic.locked %}<span class="badge muted-badge">Locked</span>{% endif %}
+        <a class="topic-title" href="{{ url('topic', {id: topic.id ~ '-' ~ topic.slug}) }}">{{ topic.title }}</a>
+        {{ hook('topic_row.title_after', topic) }}
+        <div class="muted small">by {{ topic.author_handle ?? topic.author_username ?? 'deleted user' }}, {{ topic.created_at|ago }}</div>
+    </div>
+    <div class="topic-stats muted">{{ topic.post_count - 1 }} replies</div>
+    <div class="topic-last muted small">
+        {{ topic.last_handle ?? topic.last_username ?? 'someone' }}<br>
+        <a href="{{ url('post', {id: topic.last_post_id}) }}">{{ topic.last_post_created|ago }}</a>
+    </div>
+</div>

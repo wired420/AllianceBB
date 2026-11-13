@@ -1,0 +1,8 @@
+{% if pages > 1 %}
+<nav class="pagination" aria-label="Pages">
+    {% for p in 1..pages %}
+        {% if p == page %}<span class="current" aria-current="page">{{ p }}</span>
+        {% else %}<a href="?page={{ p }}">{{ p }}</a>{% endif %}
+    {% endfor %}
+</nav>
+{% endif %}

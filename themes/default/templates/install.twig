@@ -1,0 +1,21 @@
+{% extends 'layout.twig' %}
+{% block title %}Install AllianceBB{% endblock %}
+{% block content %}
+    <section class="panel narrow">
+        <h1 class="panel-title">Install AllianceBB</h1>
+        {% if db_error %}
+            <div class="flash flash-error">{{ db_error }}</div>
+        {% else %}
+            <p class="muted">This creates the database tables and your admin account.</p>
+            {% if error %}<div class="flash flash-error">{{ error }}</div>{% endif %}
+            <form method="post" class="stack">
+                {% if needs_token %}<label>Install token <input name="install_token" required><small class="muted">The INSTALL_TOKEN value from your server's .env file.</small></label>{% endif %}
+                <label>Site name <input name="site_name" value="{{ site_name }}" required maxlength="60"><small class="muted">Other sites see your users as user@SiteName, with spaces removed.</small></label>
+                <label>Admin username <input name="username" value="{{ username }}" required></label>
+                <label>Admin email <input type="email" name="email" value="{{ email }}" required></label>
+                <label>Admin password <input type="password" name="password" required minlength="8"></label>
+                <button class="button">Install</button>
+            </form>
+        {% endif %}
+    </section>
+{% endblock %}

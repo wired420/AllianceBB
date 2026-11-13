@@ -1,0 +1,31 @@
+{% extends 'admin/layout.twig' %}
+{% block admin %}
+    <section class="panel">
+        <h1 class="panel-title">Colors</h1>
+        <p class="muted">Changes apply to the active theme, {{ themes[active].title ?? active }}.</p>
+        <form method="post" class="color-grid">
+            {{ csrf_field() }}
+            {% for key, color in colors %}
+                <label class="color-field"><input type="color" name="colors[{{ key }}]" value="{{ color.value }}"> {{ color.label }}</label>
+            {% endfor %}
+            <div class="form-actions">
+                <button class="button" name="action" value="colors">Save colors</button>
+                <button class="button secondary" name="action" value="reset">Reset to theme defaults</button>
+            </div>
+        </form>
+    </section>
+    <section class="panel">
+        <h2 class="panel-title">Themes</h2>
+        {% for name, theme in themes %}
+            <div class="list-row">
+                <div><strong>{{ theme.title }}</strong> <span class="muted small">{{ theme.version ?? '' }}{% if theme.parent is defined %} · based on {{ theme.parent }}{% endif %}</span>
+                    {% if theme.description is defined %}<p class="muted small">{{ theme.description }}</p>{% endif %}</div>
+                {% if name == active %}<span class="badge">Active</span>
+                {% else %}
+                    <form method="post">{{ csrf_field() }}<input type="hidden" name="theme" value="{{ name }}"><button class="button small" name="action" value="activate">Use this theme</button></form>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <p class="muted small">To make your own theme, copy themes/default to a new folder, or create a folder with a theme.json containing "parent": "default" and only the templates you want to change.</p>
+    </section>
+{% endblock %}

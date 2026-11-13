@@ -1,0 +1,16 @@
+{% extends 'layout.twig' %}
+{% block title %}Sign up · {{ setting('site.name') }}{% endblock %}
+{% block content %}
+    <section class="panel narrow">
+        <h1 class="panel-title">Create an account</h1>
+        {% if error %}<div class="flash flash-error">{{ error }}</div>{% endif %}
+        <form method="post" class="stack">
+            {{ csrf_field() }}
+            <label>Username <input name="username" value="{{ username }}" required pattern="[A-Za-z0-9_.\-]{3,32}" autocomplete="username"></label>
+            <label>Email <input type="email" name="email" value="{{ email }}" required autocomplete="email"></label>
+            <label>Password <input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
+            {{ hook('register_form') }}
+            <button class="button">Sign up</button>
+        </form>
+    </section>
+{% endblock %}

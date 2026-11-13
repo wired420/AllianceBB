@@ -1,0 +1,31 @@
+{% extends 'admin/layout.twig' %}
+{% block admin %}
+    <section class="panel">
+        <h1 class="panel-title">Users</h1>
+        <table class="table">
+            <thead><tr><th>User</th><th>Email</th><th>Posts</th><th>Role</th><th></th></tr></thead>
+            <tbody>
+            {% for user in users %}
+                <tr{% if user.banned_at %} class="banned"{% endif %}>
+                    <td>{{ user.username }}{% if user.banned_at %} <span class="badge danger-badge">Banned</span>{% endif %}</td>
+                    <td class="muted">{{ user.email }}</td>
+                    <td>{{ user.post_count }}</td>
+                    <td>
+                        <form method="post" class="inline">{{ csrf_field() }}<input type="hidden" name="user_id" value="{{ user.id }}"><input type="hidden" name="action" value="role">
+                            <select name="role" onchange="this.form.submit()" aria-label="Role for {{ user.username }}">
+                                {% for role in ['member', 'moderator', 'admin'] %}<option{% if role == user.role %} selected{% endif %}>{{ role }}</option>{% endfor %}
+                            </select>
+                        </form>
+                    </td>
+                    <td>
+                        <form method="post" class="inline">{{ csrf_field() }}<input type="hidden" name="user_id" value="{{ user.id }}">
+                            {% if user.banned_at %}<button class="link-button" name="action" value="unban">Unban</button>
+                            {% else %}<button class="link-button danger" name="action" value="ban" data-confirm="Ban {{ user.username }}?">Ban</button>{% endif %}
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </section>
+{% endblock %}

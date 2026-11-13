@@ -1,0 +1,19 @@
+<div class="forum-row" id="node-{{ forum.id }}">
+    <div class="forum-main">
+        <a class="forum-title" href="{{ url('forum', {id: forum.id ~ '-' ~ forum.slug}) }}">{{ forum.title }}</a>
+        {{ hook('forum_row.title_after', forum) }}
+        {% if forum.description %}<p class="muted">{{ forum.description }}</p>{% endif %}
+        {% if forum.children is not empty %}
+            <p class="subforums">Sub-forums:
+                {% for sub in forum.children %}<a href="{{ url('forum', {id: sub.id ~ '-' ~ sub.slug}) }}">{{ sub.title }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+            </p>
+        {% endif %}
+    </div>
+    <div class="forum-stats muted">{{ forum.topic_count }} topics<br>{{ forum.post_count }} posts</div>
+    <div class="forum-last muted">
+        {% if forum.last_topic_id %}
+            <a href="{{ url('topic', {id: forum.last_topic_id ~ '-' ~ forum.last_topic_slug}) }}">{{ forum.last_topic_title|length > 40 ? forum.last_topic_title|slice(0, 40) ~ '…' : forum.last_topic_title }}</a><br>
+            by {{ forum.last_post_username ?: 'someone' }}, {{ forum.last_post_at|ago }}
+        {% else %}No posts yet{% endif %}
+    </div>
+</div>

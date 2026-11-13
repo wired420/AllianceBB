@@ -1,0 +1,36 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use AllianceBB\App;
+use AllianceBB\Core\Migrator;
+use AllianceBB\Plugin\PluginManager;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+$app = App::boot(dirname(__DIR__));
+$command = $argv[1] ?? 'help';
+
+switch ($command) {
+    case 'migrate':
+        $applied = (new Migrator($app->db()))->migrate($app->rootDir . '/migrations');
+        foreach ($app->get(PluginManager::class)->all() as $name => $plugin) {
+            if ($plugin['enabled'] && is_dir($app->rootDir . "/plugins/$name/migrations")) {
+                $applied = [...$applied, ...(new Migrator($app->db()))->migrate($app->rootDir . "/plugins/$name/migrations", "plugin:$name")];
+            }
+        }
+        echo $applied === [] ? "Database is up to date.\n" : 'Applied: ' . implode(', ', $applied) . "\n";
+        break;
+
+    default:
+        // Plugins can add commands through the "console" action.
+        $handled = false;
+        $app->hooks()->doAction('console', $command, array_slice($argv, 2), $app, function () use (&$handled) {
+            $handled = true;
+        });
+        if (!$handled) {
+            echo "AllianceBB " . App::VERSION . "\n\nCommands:\n  migrate   Apply database migrations\n";
+            exit($command === 'help' ? 0 : 1);
+        }
+}

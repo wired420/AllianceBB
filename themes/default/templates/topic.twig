@@ -1,0 +1,61 @@
+{% extends 'layout.twig' %}
+{% block title %}{{ topic.title }} · {{ setting('site.name') }}{% endblock %}
+{% block content %}
+    {% include 'partials/breadcrumbs.twig' %}
+    <div class="page-head">
+        <div>
+            <h1>{{ topic.title }}</h1>
+            <p class="muted small">
+                {% if topic.pinned %}<span class="badge">Pinned</span>{% endif %}
+                {% if topic.locked %}<span class="badge muted-badge">Locked</span>{% endif %}
+                {{ topic.post_count }} posts
+            </p>
+            {{ hook('topic.head', topic) }}
+        </div>
+        {% if can('topic.moderate', topic) %}
+            <details class="mod-tools">
+                <summary class="button secondary small">Moderate</summary>
+                <div class="mod-menu">
+                    <form method="post" action="{{ url('topic.moderate', {id: topic.id}) }}">{{ csrf_field() }}
+                        <button name="action" value="{{ topic.locked ? 'unlock' : 'lock' }}" class="link-button">{{ topic.locked ? 'Unlock' : 'Lock' }} topic</button>
+                        <button name="action" value="{{ topic.pinned ? 'unpin' : 'pin' }}" class="link-button">{{ topic.pinned ? 'Unpin' : 'Pin' }} topic</button>
+                    </form>
+                    <form method="post" action="{{ url('topic.moderate', {id: topic.id}) }}" class="move-form">{{ csrf_field() }}
+                        <input type="hidden" name="action" value="move">
+                        <label>Move to
+                            <select name="node_id">
+                                {% for f in forums %}<option value="{{ f.id }}"{% if f.id == topic.node_id %} selected{% endif %}>{{ '— '|repeat(f.depth) }}{{ f.title }}</option>{% endfor %}
+                            </select>
+                        </label>
+                        <button class="button small">Move</button>
+                    </form>
+                </div>
+            </details>
+        {% endif %}
+    </div>
+
+    {% include 'partials/pagination.twig' %}
+    <div class="posts" data-live-channel="topic/{{ topic.id }}" data-live-append="{{ page == pages ? '1' : '0' }}">
+        {% for post in posts %}
+            {% include 'partials/post.twig' %}
+        {% endfor %}
+    </div>
+    {% include 'partials/pagination.twig' %}
+
+    <section class="panel reply" id="reply">
+        {% if can('post.reply', topic) %}
+            <h2 class="panel-title">Reply</h2>
+            <form method="post" action="{{ url('topic.reply', {id: topic.id}) }}" class="post-form" data-live-reply>
+                {{ csrf_field() }}
+                {{ hook('reply_form.before', topic) }}
+                <textarea name="body" rows="6" required placeholder="Write your reply. Markdown works: **bold**, _italic_, [links](https://example.com), lists and code."></textarea>
+                {{ hook('reply_form.after', topic) }}
+                <div class="form-actions"><button class="button">Post reply</button></div>
+            </form>
+        {% elseif topic.locked %}
+            <p class="muted">This topic is locked.</p>
+        {% else %}
+            <p class="muted"><a href="{{ url('login') }}?next=/topic/{{ topic.id }}">Log in</a> to reply.</p>
+        {% endif %}
+    </section>
+{% endblock %}

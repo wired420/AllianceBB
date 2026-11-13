@@ -1,0 +1,30 @@
+{% extends 'admin/layout.twig' %}
+{% block admin %}
+    <section class="panel">
+        <h1 class="panel-title">Plugins</h1>
+        {% for name, plugin in plugins %}
+            <div class="list-row">
+                <div>
+                    <strong>{{ plugin.title ?? name }}</strong> <span class="muted small">{{ plugin.version ?? '' }}</span>
+                    {% if plugin.description is defined %}<p class="muted small">{{ plugin.description }}</p>{% endif %}
+                    {% if plugin.error %}<p class="flash flash-error small">Failed to load: {{ plugin.error }}</p>{% endif %}
+                </div>
+                <form method="post">{{ csrf_field() }}<input type="hidden" name="plugin" value="{{ name }}">
+                    {% if plugin.enabled %}<button class="button small secondary" name="action" value="disable">Disable</button>
+                    {% else %}<button class="button small" name="action" value="enable">Enable</button>{% endif %}
+                </form>
+            </div>
+        {% else %}
+            <p class="muted">No plugins installed.</p>
+        {% endfor %}
+    </section>
+    <section class="panel">
+        <h2 class="panel-title">Upload a plugin</h2>
+        <p class="muted small">Plugins run with full access to your forum. Only install plugins you trust.</p>
+        <form method="post" enctype="multipart/form-data" class="stack">
+            {{ csrf_field() }}
+            <input type="file" name="zip" accept=".zip" required>
+            <button class="button" name="action" value="upload">Upload</button>
+        </form>
+    </section>
+{% endblock %}

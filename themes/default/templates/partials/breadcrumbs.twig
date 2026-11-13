@@ -1,0 +1,6 @@
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="{{ url('home') }}">Forums</a>
+    {% for crumb in breadcrumbs %}
+        <span aria-hidden="true">›</span> <a href="{{ url('forum', {id: crumb.id ~ '-' ~ crumb.slug}) }}">{{ crumb.title }}</a>
+    {% endfor %}
+</nav>

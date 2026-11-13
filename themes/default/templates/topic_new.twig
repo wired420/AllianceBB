@@ -1,0 +1,17 @@
+{% extends 'layout.twig' %}
+{% block title %}New topic · {{ node.title }}{% endblock %}
+{% block content %}
+    {% include 'partials/breadcrumbs.twig' %}
+    <section class="panel">
+        <h1 class="panel-title">New topic in {{ node.title }}</h1>
+        {% if error %}<div class="flash flash-error">{{ error }}</div>{% endif %}
+        <form method="post" class="post-form">
+            {{ csrf_field() }}
+            <label>Title <input name="title" value="{{ title }}" maxlength="150" required autofocus></label>
+            {{ hook('topic_form.before', node) }}
+            <label>Message <textarea name="body" rows="10" required>{{ body }}</textarea></label>
+            {{ hook('topic_form.after', node) }}
+            <div class="form-actions"><button class="button">Start topic</button></div>
+        </form>
+    </section>
+{% endblock %}

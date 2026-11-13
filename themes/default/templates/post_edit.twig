@@ -1,0 +1,16 @@
+{% extends 'layout.twig' %}
+{% block title %}Edit post · {{ topic.title }}{% endblock %}
+{% block content %}
+    <section class="panel">
+        <h1 class="panel-title">Edit post in “{{ topic.title }}”</h1>
+        {% if error %}<div class="flash flash-error">{{ error }}</div>{% endif %}
+        <form method="post" class="post-form">
+            {{ csrf_field() }}
+            <textarea name="body" rows="10" required>{{ body }}</textarea>
+            <div class="form-actions">
+                <button class="button">Save</button>
+                <a href="{{ url('post', {id: post.id}) }}">Cancel</a>
+            </div>
+        </form>
+    </section>
+{% endblock %}

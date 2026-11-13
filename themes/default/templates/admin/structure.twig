@@ -1,0 +1,42 @@
+{% extends 'admin/layout.twig' %}
+{% block admin %}
+    <section class="panel">
+        <h1 class="panel-title">Forums</h1>
+        <p class="muted">Categories group forums. Forums hold topics and can hold sub-forums. Lower position numbers show first.</p>
+        {% for node in nodes %}
+            <form method="post" action="{{ url('admin.structure.item', {id: node.id}) }}" class="node-edit" style="--depth: {{ node.depth }}">
+                {{ csrf_field() }}
+                <span class="badge {{ node.type == 'category' ? '' : 'muted-badge' }}">{{ node.depth > 0 and node.type == 'forum' and nodes|filter(n => n.id == node.parent_id and n.type == 'forum')|length ? 'sub-forum' : node.type }}</span>
+                <input name="title" value="{{ node.title }}" aria-label="Title" required>
+                <input name="description" value="{{ node.description }}" aria-label="Description" placeholder="Description">
+                <input name="position" value="{{ node.position }}" aria-label="Position" type="number" class="tiny">
+                <button class="button small" name="action" value="save">Save</button>
+                <button class="button small danger" name="action" value="delete" data-confirm="Delete {{ node.title }} and every topic in it?">Delete</button>
+            </form>
+        {% else %}
+            <p class="muted">Nothing yet.</p>
+        {% endfor %}
+    </section>
+    <section class="panel">
+        <h2 class="panel-title">Add</h2>
+        <form method="post" class="stack">
+            {{ csrf_field() }}
+            <label>Type
+                <select name="type">
+                    <option value="forum">Forum (or sub-forum, if the parent is a forum)</option>
+                    <option value="category">Category</option>
+                </select>
+            </label>
+            <label>Inside
+                <select name="parent_id">
+                    <option value="">Top level</option>
+                    {% for node in nodes %}<option value="{{ node.id }}">{{ '— '|repeat(node.depth) }}{{ node.title }}</option>{% endfor %}
+                </select>
+            </label>
+            <label>Title <input name="title" required maxlength="120"></label>
+            <label>Description <input name="description" maxlength="300"></label>
+            {{ hook('admin.structure.form') }}
+            <button class="button">Add</button>
+        </form>
+    </section>
+{% endblock %}
