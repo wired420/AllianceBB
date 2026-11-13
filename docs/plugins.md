@@ -44,7 +44,7 @@ Admins enable plugins, or upload them as a zip, under **Admin › Plugins**. The
 - **Filters** pass a value through your callback, and you return it, changed or not. Register with `$app->hooks()->addFilter($name, $callback, $priority)`.
 - Lower priority numbers run first. The default is 10.
 - Arguments are passed in the order listed below. You can accept fewer than are passed.
-- `$ctx` is the current request's `AllianceBB\Core\Context`: `$ctx->user`, `$ctx->request`, `$ctx->isModerator()` and so on. It is `null` when the change came from another site or from the background worker.
+- `$ctx` is the current request's `AllianceBB\Core\Context`: `$ctx->user`, `$ctx->request`, `$ctx->isModerator()` and so on. It is `null` when the change came from another site or from the background worker. For requests through the [public API](api.md), `$ctx->apiToken` holds the token's `id` and `scope`; otherwise it is `null`.
 - Rows such as `$post` and `$topic` are arrays with the database columns (see `migrations/`).
 
 ## Render hooks (add HTML to pages)
@@ -136,6 +136,7 @@ A theme can add its own `{{ hook('…') }}` calls anywhere, and plugins can use 
 | `view.data` | The data passed to a template | `$template` |
 | `response` | The finished `Response` before it is sent; add headers, change the body | `$ctx` (may be `null`) |
 | `federation.event_payload` | A change about to be sent to sites that clone your section | `$type`, `$rootNode` |
+| `api.resource` | A forum, topic, post or user about to be returned by the [public API](api.md); add fields | `$type`, `$row`, `$ctx` |
 
 ### Permissions
 
@@ -178,6 +179,7 @@ Plugins can check their own abilities with `$app->get(AllianceBB\Service\Permiss
 | Run background work | `$app->get(AllianceBB\Federation\Jobs::class)->handle('my-plugin.job', fn (array $payload) => …)` once at boot, then `->push('my-plugin.job', [...])` |
 | Push a live update to open pages | `$app->get(AllianceBB\Live\Broadcaster::class)->publish('topic/12', 'post.edited', ['post_id' => 34])` |
 | Add a console command | `console` action |
+| Add an API endpoint | `routes` action with a path under `/api/v1/<plugin-name>/`; token sign-in, JSON errors and CORS come with it (see [api.md](api.md)) |
 
 Services that can be replaced: `Database`, `Settings`, `Users`, `Auth`, `Permissions`, `Markup`, `Nodes`, `Posts`, `Broadcaster`, `Themes`, `View`, `Jobs`, `HttpClient`, `Federation` and `PluginManager`. Override them at the top level of your plugin's function, before anything uses them.
 

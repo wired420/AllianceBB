@@ -110,6 +110,16 @@ final class Posts
         );
     }
 
+    /** @return list<array<string, mixed>> visible posts with an id above $afterId, oldest first */
+    public function postsAfter(int $topicId, int $afterId, int $limit = self::POSTS_PER_PAGE): array
+    {
+        return $this->db->all(
+            self::POST_SELECT . ' WHERE p.topic_id = ? AND p.id > ? AND p.deleted_at IS NULL AND ' . self::VISIBLE . '
+              ORDER BY p.id LIMIT ?',
+            [$topicId, $afterId, $limit],
+        );
+    }
+
     public function pageOfPost(int $topicId, int $postId): int
     {
         $before = (int) $this->db->value(

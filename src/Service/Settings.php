@@ -18,6 +18,7 @@ final class Settings
         'site.registration_open' => true,
         'site.url' => '',
         'federation.mode' => 'private', // public | private | off
+        'api.enabled' => true,
         'theme.name' => 'default',
         'theme.colors' => [],
         'installed' => false,

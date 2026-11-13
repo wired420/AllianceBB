@@ -60,6 +60,7 @@ services:
       APP_URL: https://${ALPHA_DOMAIN}
       DATABASE_URL: postgres://alliancebb:${DB_PASSWORD}@db:5432/alliancebb_alpha
       INSTALL_TOKEN: ${INSTALL_TOKEN}
+      TRUSTED_PROXIES: private
       MERCURE_PUBLISH_URL: http://localhost/.well-known/mercure
       MERCURE_PUBLIC_URL: /.well-known/mercure
       MERCURE_PUBLISHER_JWT_KEY: ${ALPHA_MERCURE_KEY}
@@ -84,6 +85,7 @@ services:
       APP_URL: https://${BETA_DOMAIN}
       DATABASE_URL: postgres://alliancebb:${DB_PASSWORD}@db:5432/alliancebb_beta
       INSTALL_TOKEN: ${INSTALL_TOKEN}
+      TRUSTED_PROXIES: private
       MERCURE_PUBLISH_URL: http://localhost/.well-known/mercure
       MERCURE_PUBLIC_URL: /.well-known/mercure
       MERCURE_PUBLISHER_JWT_KEY: ${BETA_MERCURE_KEY}

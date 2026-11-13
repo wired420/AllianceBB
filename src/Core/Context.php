@@ -21,6 +21,9 @@ final class Context
     /** @var list<array{0: string, 1: string, 2: int}> cookies to set: name, value, expires */
     public array $setCookies = [];
 
+    /** @var array{id: int, scope: string}|null set when the request came through the public API with a token */
+    public ?array $apiToken = null;
+
     public function __construct(
         public readonly Request $request,
         public string $csrfToken,

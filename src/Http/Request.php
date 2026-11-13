@@ -59,9 +59,28 @@ final class Request
             files: $_FILES,
             scheme: $scheme,
             host: (string) ($headers['host'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost'),
-            ip: (string) ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'),
+            ip: self::clientIp((string) ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'), $headers['x-forwarded-for'] ?? ''),
             target: (string) ($_SERVER['REQUEST_URI'] ?? '/'),
         );
+    }
+
+    /**
+     * The visitor's address. With TRUSTED_PROXIES=private, a request that arrives
+     * from a private or loopback address (a reverse proxy) uses the last address
+     * that proxy added to X-Forwarded-For, which the visitor cannot forge.
+     */
+    public static function clientIp(string $remote, string $forwardedFor): string
+    {
+        if ($forwardedFor === '' || getenv('TRUSTED_PROXIES') !== 'private') {
+            return $remote;
+        }
+        $isPublic = filter_var($remote, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+        if ($isPublic) {
+            return $remote;
+        }
+        $parts = array_map('trim', explode(',', $forwardedFor));
+        $last = (string) end($parts);
+        return filter_var($last, FILTER_VALIDATE_IP) !== false ? $last : $remote;
     }
 
     public function input(string $key, string $default = ''): string

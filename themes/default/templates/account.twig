@@ -14,4 +14,31 @@
             <button class="button">Save</button>
         </form>
     </section>
+    {% if api_enabled %}
+    <section class="panel narrow" id="tokens">
+        <h2 class="panel-title">Apps and tokens</h2>
+        <p class="muted small">A token lets an app or script use this forum as you, through the <a href="{{ url('api.v1') }}">API</a>. Apps can also sign in for you and create one. Revoke a token to sign that app out.</p>
+        {% if new_token %}
+            <div class="flash flash-success">
+                <p>Copy your new token now. It won't be shown again.</p>
+                <div class="copy-row"><input readonly value="{{ new_token.token }}" id="new-token"><button type="button" class="button small secondary" data-copy="#new-token">Copy</button></div>
+            </div>
+        {% endif %}
+        {% for t in tokens %}
+            <form method="post" class="list-row">{{ csrf_field() }}
+                <input type="hidden" name="action" value="revoke_token"><input type="hidden" name="token_id" value="{{ t.id }}">
+                <span><strong>{{ t.name }}</strong> <span class="muted small">{{ t.prefix }}… · {{ t.scope == 'write' ? 'read and write' : 'read only' }} · {{ t.last_used_at ? 'used ' ~ t.last_used_at|ago : 'never used' }}</span></span>
+                <button class="button small danger" data-confirm="Revoke {{ t.name }}?">Revoke</button>
+            </form>
+        {% else %}
+            <p class="muted">No tokens yet.</p>
+        {% endfor %}
+        <form method="post" class="inline-form">{{ csrf_field() }}
+            <input type="hidden" name="action" value="create_token">
+            <input name="token_name" placeholder="What it's for, e.g. Phone app" required maxlength="60">
+            <select name="token_scope"><option value="read">Read only</option><option value="write" selected>Read and write</option></select>
+            <button class="button small">Create token</button>
+        </form>
+    </section>
+    {% endif %}
 {% endblock %}

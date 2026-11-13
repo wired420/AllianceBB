@@ -120,6 +120,7 @@ final class AdminController extends Controller
                 $settings->set('site.description', mb_substr($ctx->request->input('site_description'), 0, 300));
                 $settings->set('site.registration_open', $ctx->request->input('registration_open') === '1');
                 $settings->set('federation.mode', $mode);
+                $settings->set('api.enabled', $ctx->request->input('api_enabled') === '1');
                 $url = rtrim($ctx->request->input('site_url'), '/');
                 if ($url !== '' && preg_match('#^https?://[^/\s]+#i', $url)) {
                     $settings->set('site.url', $url);

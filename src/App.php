@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AllianceBB;
 
 use AllianceBB\Controller\AdminController;
+use AllianceBB\Controller\ApiController;
 use AllianceBB\Controller\AuthController;
 use AllianceBB\Controller\FederationApiController;
 use AllianceBB\Controller\SharingController;
@@ -26,12 +27,14 @@ use AllianceBB\Live\Broadcaster;
 use AllianceBB\Live\DatabaseBroadcaster;
 use AllianceBB\Live\MercureBroadcaster;
 use AllianceBB\Plugin\PluginManager;
+use AllianceBB\Service\ApiTokens;
 use AllianceBB\Service\Auth;
 use AllianceBB\Service\Markup;
 use AllianceBB\Service\Nodes;
 use AllianceBB\Service\Permissions;
 use AllianceBB\Service\Posts;
 use AllianceBB\Service\Settings;
+use AllianceBB\Service\Throttle;
 use AllianceBB\Service\Users;
 use AllianceBB\View\Themes;
 use AllianceBB\View\View;
@@ -121,6 +124,8 @@ final class App
             $c->get(Jobs::class),
             $c->get(HttpClient::class),
         ));
+        $c->set(ApiTokens::class, fn (Container $c) => new ApiTokens($c->get(Database::class)));
+        $c->set(Throttle::class, fn (Container $c) => new Throttle($c->get(Database::class)));
         $c->set(PluginManager::class, fn (Container $c) => new PluginManager($this->rootDir . '/plugins', $c->get(Database::class)));
     }
 
@@ -175,6 +180,31 @@ final class App
         $r->post(Federation::API . "/nodes/$g/posts", $api->posts(...), 'api.posts');
         $r->post(Federation::API . "/nodes/$g/posts/{post:[0-9a-f-]+}/{action:edit|delete}", $api->change(...), 'api.change');
 
+        $api = new ApiController($this);
+        $v1 = ApiController::PREFIX;
+        $n = '{id:\d+}';
+        $r->get($v1, $api->site(...), 'api.v1');
+        $r->get("$v1/site", $api->site(...), 'api.v1.site');
+        $r->post("$v1/tokens", $api->createToken(...), 'api.v1.tokens.create');
+        $r->get("$v1/tokens", $api->tokens(...), 'api.v1.tokens');
+        $r->add('DELETE', "$v1/tokens/{id:\d+|current}", $api->revokeToken(...), 'api.v1.tokens.revoke');
+        $r->get("$v1/me", $api->me(...), 'api.v1.me');
+        $r->get("$v1/users/{username:[^/]+}", $api->user(...), 'api.v1.user');
+        $r->get("$v1/forums", $api->forums(...), 'api.v1.forums');
+        $r->get("$v1/forums/$n", $api->forum(...), 'api.v1.forum');
+        $r->get("$v1/forums/$n/topics", $api->topics(...), 'api.v1.forum.topics');
+        $r->post("$v1/forums/$n/topics", $api->createTopic(...), 'api.v1.forum.topics.create');
+        $r->get("$v1/topics/$n", $api->topic(...), 'api.v1.topic');
+        $r->add('PATCH', "$v1/topics/$n", $api->updateTopic(...), 'api.v1.topic.update');
+        $r->get("$v1/topics/$n/posts", $api->topicPosts(...), 'api.v1.topic.posts');
+        $r->post("$v1/topics/$n/posts", $api->reply(...), 'api.v1.topic.reply');
+        $r->get("$v1/posts/$n", $api->post(...), 'api.v1.post');
+        $r->add('PATCH', "$v1/posts/$n", $api->editPost(...), 'api.v1.post.edit');
+        $r->add('DELETE', "$v1/posts/$n", $api->deletePost(...), 'api.v1.post.delete');
+        $r->add(['POST', 'DELETE'], "$v1/posts/$n/hide", $api->hidePost(...), 'api.v1.post.hide');
+        $r->add(['POST', 'DELETE'], "$v1/posts/$n/block-author", $api->blockAuthor(...), 'api.v1.post.block');
+        $r->get("$v1/live", $api->live(...), 'api.v1.live');
+
         $system = new SystemController($this);
         $r->get('/live/poll', $system->livePoll(...), 'live.poll');
         $r->get('/theme-assets/{theme}/{path:.+}', $system->themeAsset(...), 'theme.asset');
@@ -192,29 +222,47 @@ final class App
         $this->reloadIfConfigChanged();
         $view = $this->view();
         $ctx = null;
+        $isApi = ApiController::isApiPath($request->path);
         try {
             $installed = $this->settings()->isInstalled();
-            if (!$installed && $request->path !== '/install' && !str_starts_with($request->path, '/theme-assets/')) {
+            if ($isApi) {
+                if (!$installed || !$this->settings()->get('api.enabled')) {
+                    throw new HttpException(404, 'The API is turned off on this site.');
+                }
+                if ($request->method === 'OPTIONS') {
+                    return ApiController::cors(new Response('', 204, []));
+                }
+                // Token-only: cookies are ignored, so the API needs no CSRF check.
+                $ctx = $this->get(ApiTokens::class)->context($request);
+            } elseif (!$installed && $request->path !== '/install' && !str_starts_with($request->path, '/theme-assets/')) {
                 return Response::redirect('/install');
+            } else {
+                $ctx = $installed ? $this->get(Auth::class)->context($request) : new Context($request, bin2hex(random_bytes(32)));
+                if ($request->isPost() && $request->path !== '/install' && !str_starts_with($request->path, '/api/')) {
+                    $this->get(Auth::class)->checkCsrf($ctx);
+                }
             }
-            $ctx = $installed ? $this->get(Auth::class)->context($request) : new Context($request, bin2hex(random_bytes(32)));
             $view->setContext($ctx);
-
-            if ($request->isPost() && $request->path !== '/install' && !str_starts_with($request->path, '/api/')) {
-                $this->get(Auth::class)->checkCsrf($ctx);
-            }
             $this->hooks->doAction('request.start', $ctx);
 
             [$handler, $params] = $this->router->match($request->method === 'HEAD' ? 'GET' : $request->method, $request->path);
             $request->params = $params;
             $response = $handler($ctx);
         } catch (HttpException $e) {
-            $response = $this->errorPage($e->status, $e->getMessage());
+            $response = $isApi ? ApiController::errorResponse($e->status, $e->getMessage()) : $this->errorPage($e->status, $e->getMessage());
         } catch (Throwable $e) {
-            error_log('AllianceBB: ' . $e::class . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString());
-            $this->get(Database::class)->reset();
-            $detail = getenv('APP_DEBUG') === '1' ? $e->getMessage() : 'Something went wrong on our side.';
-            $response = $this->errorPage(500, $detail);
+            if ($isApi && $e instanceof \InvalidArgumentException) {
+                // Services throw these with messages meant for the user, such as "Topic titles are 1 to 150 characters."
+                $response = ApiController::errorResponse(422, $e->getMessage());
+            } else {
+                error_log('AllianceBB: ' . $e::class . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+                $this->get(Database::class)->reset();
+                $detail = getenv('APP_DEBUG') === '1' ? $e->getMessage() : 'Something went wrong on our side.';
+                $response = $isApi ? ApiController::errorResponse(500, $detail) : $this->errorPage(500, $detail);
+            }
+        }
+        if ($isApi) {
+            $response = ApiController::cors($response);
         }
 
         if ($ctx !== null) {

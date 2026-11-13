@@ -16,6 +16,7 @@
                 <label class="check"><input type="radio" name="federation_mode" value="private"{% if settings['federation.mode'] == 'private' %} checked{% endif %}> <span><strong>Private</strong> · only sites you give a key to can connect</span></label>
                 <label class="check"><input type="radio" name="federation_mode" value="off"{% if settings['federation.mode'] == 'off' %} checked{% endif %}> <span><strong>Off</strong> · no sharing in either direction</span></label>
             </fieldset>
+            <label class="check"><input type="checkbox" name="api_enabled" value="1"{% if settings['api.enabled'] %} checked{% endif %}> <span><strong>Public API</strong> · let members use apps that read and post through <code>/api/v1</code> with their own tokens</span></label>
             {{ hook('admin.settings.form', settings) }}
             <button class="button">Save settings</button>
         </form>

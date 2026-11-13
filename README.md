@@ -66,6 +66,10 @@ Plugins can add HTML to about 30 spots on the page, react to every change (posts
 
 Plugins run with full access to the forum, so only install ones you trust.
 
+## API
+
+Apps, bots and other websites can read and post through a JSON API at `/api/v1`, using personal tokens that members create under **Your account** or by signing in from the app. See [docs/api.md](docs/api.md).
+
 ## Themes
 
 A theme is a folder in `themes/` with a `theme.json`, a `templates/` folder and an `assets/` folder. Set `"parent": "default"` to inherit everything and override only the templates you change. Colors listed in `theme.json` appear as color pickers under **Admin › Appearance** and reach CSS as `--abb-<name>` variables.

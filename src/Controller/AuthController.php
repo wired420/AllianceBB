@@ -7,7 +7,9 @@ namespace AllianceBB\Controller;
 use AllianceBB\Core\Context;
 use AllianceBB\Http\HttpException;
 use AllianceBB\Http\Response;
+use AllianceBB\Service\ApiTokens;
 use AllianceBB\Service\Auth;
+use AllianceBB\Service\Throttle;
 use AllianceBB\Service\Users;
 use InvalidArgumentException;
 
@@ -17,12 +19,24 @@ final class AuthController extends Controller
     {
         $error = null;
         if ($ctx->request->isPost()) {
-            $user = $this->app->get(Users::class)->verify($ctx->request->input('login'), (string) ($ctx->request->post['password'] ?? ''));
-            if ($user === null) {
+            $throttle = $this->app->get(Throttle::class);
+            $keys = Throttle::keys($ctx->request->ip, $ctx->request->input('login'));
+            try {
+                $throttle->check($keys);
+                $user = $this->app->get(Users::class)->verify($ctx->request->input('login'), (string) ($ctx->request->post['password'] ?? ''));
+            } catch (HttpException $e) {
+                $user = false;
+                $error = $e->getMessage();
+            }
+            if ($user === false) {
+                // throttled; $error is set
+            } elseif ($user === null) {
+                $throttle->fail($keys);
                 $error = 'That username or password is not right.';
             } elseif ($user['banned_at'] !== null) {
                 $error = 'This account is banned.';
             } else {
+                $throttle->clear($keys);
                 $this->app->get(Auth::class)->login($ctx, $user);
                 $ctx->flash('Welcome back, ' . $user['username'] . '.');
                 return Response::redirect($this->safeNext($ctx));
@@ -72,7 +86,19 @@ final class AuthController extends Controller
     {
         $this->requireLogin($ctx);
         $error = null;
-        if ($ctx->request->isPost()) {
+        $tokens = $this->app->get(ApiTokens::class);
+        $newToken = null;
+        if ($ctx->request->isPost() && $ctx->request->input('action') === 'create_token') {
+            try {
+                $newToken = $tokens->create((int) $ctx->userId(), $ctx->request->input('token_name'), $ctx->request->input('token_scope'));
+            } catch (InvalidArgumentException $e) {
+                $error = $e->getMessage();
+            }
+        } elseif ($ctx->request->isPost() && $ctx->request->input('action') === 'revoke_token') {
+            $tokens->revoke((int) $ctx->userId(), (int) $ctx->request->input('token_id'));
+            $ctx->flash('Token revoked. Apps using it are signed out.');
+            return Response::redirect($this->url('account') . '#tokens');
+        } elseif ($ctx->request->isPost()) {
             try {
                 $this->app->get(Users::class)->updateProfile(
                     (int) $ctx->userId(),
@@ -86,7 +112,12 @@ final class AuthController extends Controller
                 $error = $e->getMessage();
             }
         }
-        return $this->render($ctx, 'account.twig', ['error' => $error]);
+        return $this->render($ctx, 'account.twig', [
+            'error' => $error,
+            'api_enabled' => (bool) $this->app->settings()->get('api.enabled'),
+            'tokens' => $tokens->forUser((int) $ctx->userId()),
+            'new_token' => $newToken,
+        ]);
     }
 
     /** Only allow redirects back into this site. */
