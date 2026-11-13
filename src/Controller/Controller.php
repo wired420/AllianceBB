@@ -55,7 +55,7 @@ abstract class Controller
     }
 
     /** @return int page number from ?page= */
-    protected function page(Context $ctx): int
+    protected function pageNumber(Context $ctx): int
     {
         return max(1, (int) $ctx->request->query('page', '1'));
     }

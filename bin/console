@@ -23,6 +23,42 @@ switch ($command) {
         echo $applied === [] ? "Database is up to date.\n" : 'Applied: ' . implode(', ', $applied) . "\n";
         break;
 
+    case 'worker':
+        // Sends webhooks, delivers posts to section owners and catches up on missed events.
+        $jobs = $app->get(\AllianceBB\Federation\Jobs::class);
+        $federation = $app->get(\AllianceBB\Federation\Federation::class);
+        $pdo = $app->db()->pdo();
+        $pdo->exec('LISTEN alliancebb_jobs');
+        $lastCatchUp = 0;
+        $started = time();
+        echo "AllianceBB worker started.\n";
+        while (true) {
+            if (!$app->settings()->isInstalled()) {
+                sleep(5);
+                continue;
+            }
+            if (time() - $lastCatchUp >= 120) {
+                $federation->queueCatchUp();
+                $lastCatchUp = time();
+            }
+            $ran = $jobs->runDue(50);
+            if ($ran === 0) {
+                // Wait for a new job notification, or poll every few seconds.
+                method_exists($pdo, 'pgsqlGetNotify') ? $pdo->pgsqlGetNotify(PDO::FETCH_ASSOC, 5000) : sleep(2);
+            }
+            $app->settings()->clearCache();
+            // Restart now and then so code updates and plugin changes take effect.
+            if (time() - $started > 3600 || $app->configChanged()) {
+                echo "Worker restarting.\n";
+                exit(0);
+            }
+        }
+
+    case 'jobs:run':
+        $ran = $app->get(\AllianceBB\Federation\Jobs::class)->runDue(500);
+        echo "Ran $ran jobs.\n";
+        break;
+
     default:
         // Plugins can add commands through the "console" action.
         $handled = false;
@@ -30,7 +66,7 @@ switch ($command) {
             $handled = true;
         });
         if (!$handled) {
-            echo "AllianceBB " . App::VERSION . "\n\nCommands:\n  migrate   Apply database migrations\n";
+            echo "AllianceBB " . App::VERSION . "\n\nCommands:\n  migrate    Apply database migrations\n  worker     Run the background worker (webhooks, delivery, catch-up)\n  jobs:run   Run due background jobs once\n";
             exit($command === 'help' ? 0 : 1);
         }
 }

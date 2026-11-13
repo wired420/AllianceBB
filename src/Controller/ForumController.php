@@ -37,15 +37,24 @@ final class ForumController extends Controller
                 'category' => $node,
             ]);
         }
-        $page = $this->page($ctx);
+        $page = $this->pageNumber($ctx);
         return $this->render($ctx, 'forum.twig', [
             'node' => $node,
+            'origin' => $this->origin($node),
             'breadcrumbs' => $this->nodes()->breadcrumbs((int) $node['id']),
             'subforums' => $this->nodes()->children((int) $node['id']),
             'topics' => $this->posts()->topicsIn((int) $node['id'], $page),
             'page' => $page,
             'pages' => max(1, (int) ceil((int) $node['topic_count'] / Posts::TOPICS_PER_PAGE)),
         ]);
+    }
+
+    /** @return array<string, mixed>|null the site a cloned forum comes from */
+    private function origin(array $node): ?array
+    {
+        return $node['origin_connection_id'] === null
+            ? null
+            : $this->app->get(\AllianceBB\Federation\Federation::class)->connection((int) $node['origin_connection_id']);
     }
 
     public function newTopic(Context $ctx): Response
@@ -74,9 +83,10 @@ final class ForumController extends Controller
     {
         $topic = $this->posts()->topic($ctx->request->intParam('id')) ?? throw new HttpException(404);
         $node = $this->nodes()->find((int) $topic['node_id']) ?? throw new HttpException(404);
-        $page = $this->page($ctx);
+        $page = $this->pageNumber($ctx);
         return $this->render($ctx, 'topic.twig', [
             'topic' => $topic,
+            'origin' => $this->origin($node),
             'node' => $node,
             'breadcrumbs' => [...$this->nodes()->breadcrumbs((int) $node['id']), $node],
             'posts' => $this->posts()->postsIn((int) $topic['id'], $page),

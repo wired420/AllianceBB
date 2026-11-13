@@ -10,6 +10,7 @@
                 {% if topic.locked %}<span class="badge muted-badge">Locked</span>{% endif %}
                 {{ topic.post_count }} posts
             </p>
+            {% if origin %}<p class="small"><span class="badge remote-badge">Shared</span> From <a href="{{ origin.base_url }}">{{ origin.site_name }}</a></p>{% endif %}
             {{ hook('topic.head', topic) }}
         </div>
         {% if can('topic.moderate', topic) %}

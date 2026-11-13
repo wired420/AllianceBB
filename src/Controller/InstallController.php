@@ -50,6 +50,7 @@ final class InstallController extends Controller
                     );
                     $settings = $this->app->settings();
                     $settings->set('site.name', $siteName);
+                    $settings->set('site.url', getenv('APP_URL') ?: $ctx->request->baseUrl());
                     $nodes = $this->app->get(Nodes::class);
                     $category = $nodes->create('category', 'General');
                     $nodes->create('forum', 'Welcome', 'Say hello and introduce yourself.', (int) $category['id']);

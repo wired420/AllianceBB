@@ -6,6 +6,7 @@
         <div>
             <h1>{{ node.title }}</h1>
             {% if node.description %}<p class="muted">{{ node.description }}</p>{% endif %}
+            {% if origin %}<p class="small"><span class="badge remote-badge">Shared</span> This forum lives on <a href="{{ origin.base_url }}">{{ origin.site_name }}</a>. Posts here appear there too.</p>{% endif %}
             {{ hook('forum.head', node) }}
         </div>
         {% if can('topic.create', node) %}

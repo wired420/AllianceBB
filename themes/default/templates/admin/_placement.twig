@@ -1,0 +1,6 @@
+<label>Put it
+    <select name="parent_id">
+        <option value="">At the top level</option>
+        {% for n in placement %}<option value="{{ n.id }}">Inside {{ '— '|repeat(n.depth) }}{{ n.title }}</option>{% endfor %}
+    </select>
+</label>

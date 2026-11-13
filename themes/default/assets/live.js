@@ -13,6 +13,18 @@
     if (message && !window.confirm(message)) e.preventDefault();
   });
 
+  // Copy buttons: <button data-copy="#input-id">
+  document.addEventListener('click', function (e) {
+    var button = e.target.closest && e.target.closest('[data-copy]');
+    if (!button) return;
+    var field = document.querySelector(button.getAttribute('data-copy'));
+    if (!field) return;
+    field.select();
+    var done = function () { var t = button.textContent; button.textContent = 'Copied'; setTimeout(function () { button.textContent = t; }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(field.value).then(done, function () { document.execCommand('copy'); done(); });
+    else { document.execCommand('copy'); done(); }
+  });
+
   var containers = Array.prototype.slice.call(document.querySelectorAll('[data-live-channel]'));
   if (!containers.length) return;
 

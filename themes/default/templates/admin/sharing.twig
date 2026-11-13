@@ -1,0 +1,166 @@
+{% extends 'admin/layout.twig' %}
+{% block admin %}
+    <section class="panel">
+        <h1 class="panel-title">Sharing</h1>
+        <p>Sharing is <strong>{{ mode }}</strong>.
+            {% if mode == 'public' %}Any AllianceBB site can connect and clone your shareable sections.
+            {% elseif mode == 'private' %}Only sites you add below can clone your sections.
+            {% else %}Nothing is shared in either direction.{% endif %}
+            <a href="{{ url('admin.settings') }}">Change</a></p>
+        <div class="copy-row">
+            <label>Your site address <input readonly value="{{ self_url }}"></label>
+            <label>Your webhook address <input readonly value="{{ webhook_url }}" id="webhook-url"></label>
+            <button type="button" class="button small secondary" data-copy="#webhook-url">Copy</button>
+        </div>
+        <p class="muted small">Give your webhook address to the admin of a site whose sections you want to clone.</p>
+    </section>
+
+    {% if mode != 'off' %}
+    <section class="panel" id="clone">
+        <h2 class="panel-title">Clone a section from another site</h2>
+        <form method="post" class="stack">
+            {{ csrf_field() }}
+            <label>Connection code <textarea name="code" rows="3" required placeholder="abb1.…"></textarea>
+                <small class="muted">The other site's admin copies this from their Sharing page.</small></label>
+            {% include 'admin/_placement.twig' %}
+            <button class="button" name="action" value="clone_code">Clone</button>
+        </form>
+        <hr>
+        <form method="post" class="inline-form">
+            {{ csrf_field() }}
+            <label>Or browse a public site <input name="site_url" placeholder="https://forum.example.com" value="{{ discovered.query_url ?? '' }}" required></label>
+            <button class="button secondary" name="action" value="discover">Look up</button>
+        </form>
+        {% if discovered %}
+            <h3>{{ discovered.name }}</h3>
+            {% if discovered.mode != 'public' %}
+                <p class="muted">This site shares privately. Ask its admin for a connection code.</p>
+            {% else %}
+                {% for s in discovered.sections ?? [] %}
+                    <form method="post" class="list-row">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="site_url" value="{{ discovered.query_url }}">
+                        <input type="hidden" name="node_guid" value="{{ s.guid }}">
+                        <div><strong>{{ s.title }}</strong> <span class="badge muted-badge">{{ s.type }}</span>
+                            {% if s.description %}<p class="muted small">{{ s.description }}</p>{% endif %}</div>
+                        <div class="inline-form">{% include 'admin/_placement.twig' %}<button class="button small" name="action" value="clone_url">Clone</button></div>
+                    </form>
+                {% else %}
+                    <p class="muted">This site has no shareable sections yet.</p>
+                {% endfor %}
+            {% endif %}
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="panel">
+        <h2 class="panel-title">Sections cloned from other sites</h2>
+        {% for c in clones %}
+            <div class="list-row">
+                <div>
+                    <a href="{{ url('forum', {id: c.id}) }}"><strong>{{ c.title }}</strong></a>
+                    <span class="badge remote-badge">from {{ c.site_name }}</span>
+                    {% if c.connection_status != 'active' %}<span class="badge danger-badge">connection {{ c.connection_status|replace({'_': ' '}) }}</span>{% endif %}
+                    <p class="muted small">{{ c.base_url }} · update #{{ c.sync_cursor }}</p>
+                </div>
+                <form method="post" class="inline-form">{{ csrf_field() }}<input type="hidden" name="node_id" value="{{ c.id }}">
+                    <button class="button small secondary" name="action" value="sync">Sync now</button>
+                    <button class="button small danger" name="action" value="disconnect" data-confirm="Stop receiving {{ c.title }} and delete the local copy?">Disconnect</button>
+                </form>
+            </div>
+        {% else %}
+            <p class="muted">None yet.</p>
+        {% endfor %}
+    </section>
+
+    <section class="panel">
+        <h2 class="panel-title">Sections you share</h2>
+        <p class="muted small">A shared category or forum includes everything inside it.</p>
+        {% for n in local_sections %}
+            <form method="post" class="list-row">
+                {{ csrf_field() }}<input type="hidden" name="node_id" value="{{ n.id }}">
+                <div>{{ n.title }} <span class="badge muted-badge">{{ n.type }}</span>
+                    {% if n.subscriber_count > 0 %}<span class="muted small">· {{ n.subscriber_count }} site{{ n.subscriber_count == 1 ? '' : 's' }} receiving it</span>{% endif %}</div>
+                <input type="hidden" name="action" value="shareable">
+                {% if n.shareable %}<button class="button small secondary" name="shareable" value="0">Stop sharing</button>
+                {% else %}<button class="button small" name="shareable" value="1">Make shareable</button>{% endif %}
+            </form>
+        {% endfor %}
+    </section>
+
+    <section class="panel" id="codes">
+        <h2 class="panel-title">Sites that clone your sections</h2>
+        {% for s in subscribers %}
+            <div class="site-card">
+                <div class="list-row">
+                    <div><strong>{{ s.site_name }}</strong> <span class="muted small">{{ s.base_url }} · shows as @{{ s.handle }}</span>
+                        {% if s.status != 'active' %}<span class="badge danger-badge">{{ s.status }}</span>{% endif %}
+                        <p class="muted small">Key {{ s.public_id }} · {{ s.subscription_count }} section{{ s.subscription_count == 1 ? '' : 's' }}{% if s.last_seen_at %} · last contact {{ s.last_seen_at|ago }}{% endif %}{% if s.created_via == 'public' %} · connected itself (public mode){% endif %}</p></div>
+                    {% if s.status == 'active' %}
+                        <form method="post">{{ csrf_field() }}<input type="hidden" name="connection_id" value="{{ s.id }}">
+                            <button class="button small danger" name="action" value="revoke" data-confirm="Revoke {{ s.site_name }}? It will stop receiving and sending posts.">Revoke</button></form>
+                    {% endif %}
+                </div>
+                {% if s.status == 'active' %}
+                    <form method="post" class="inline-form">{{ csrf_field() }}<input type="hidden" name="connection_id" value="{{ s.id }}">
+                        <label>Their webhook address <input name="webhook_url" value="{{ s.webhook_url }}" placeholder="https://their-site/api/alliance/v1/webhook"></label>
+                        <button class="button small secondary" name="action" value="webhook">Save</button>
+                    </form>
+                    <form method="post" class="inline-form">{{ csrf_field() }}<input type="hidden" name="connection_id" value="{{ s.id }}">
+                        <label>Section
+                            <select name="node_id">
+                                {% for n in shareable %}<option value="{{ n.id }}"{% if n.id == code_node and s.id == code_conn %} selected{% endif %}>{{ n.title }}</option>{% else %}<option value="">Make a section shareable first</option>{% endfor %}
+                            </select></label>
+                        <button class="button small" name="action" value="code"{% if shareable is empty %} disabled{% endif %}>Get connection code</button>
+                    </form>
+                    {% if code and code_conn == s.id %}
+                        <div class="code-box">
+                            <textarea readonly rows="3" id="code-{{ s.id }}">{{ code }}</textarea>
+                            <button type="button" class="button" data-copy="#code-{{ s.id }}">Copy connection code</button>
+                            <p class="muted small">Paste this on {{ s.site_name }} under Admin › Sharing › Clone a section. It contains their private key, so only send it to their admin.</p>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        {% else %}
+            <p class="muted">No sites yet.</p>
+        {% endfor %}
+        {% if mode != 'off' %}
+            <h3>Add a site</h3>
+            <form method="post" class="stack">
+                {{ csrf_field() }}
+                <label>Site name <input name="name" required maxlength="60"></label>
+                <label>Site address <input name="base_url" required placeholder="https://their-forum.example.com"></label>
+                <label>Their webhook address <input name="webhook_url" placeholder="https://their-forum.example.com/api/alliance/v1/webhook">
+                    <small class="muted">Shown on their Sharing page. Without it, they still get updates every few minutes.</small></label>
+                <button class="button" name="action" value="add_site">Add site and create key</button>
+            </form>
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <h2 class="panel-title">Hidden on this site</h2>
+        {% for p in hidden_posts %}
+            <form method="post" class="list-row">{{ csrf_field() }}<input type="hidden" name="post_id" value="{{ p.id }}">
+                <div><strong>{{ p.author }}</strong> in {{ p.topic_title }}<p class="muted small">{{ p.body|length > 120 ? p.body|slice(0, 120) ~ '…' : p.body }}</p></div>
+                <button class="button small secondary" name="action" value="unhide">Show again</button>
+            </form>
+        {% else %}<p class="muted">No hidden posts.</p>{% endfor %}
+        <h3>Blocked users</h3>
+        {% for u in blocked_users %}
+            <form method="post" class="list-row">{{ csrf_field() }}<input type="hidden" name="remote_user_id" value="{{ u.id }}">
+                <div>{{ u.handle }} <span class="muted small">blocked {{ u.blocked_at|ago }}</span></div>
+                <button class="button small secondary" name="action" value="unblock">Unblock</button>
+            </form>
+        {% else %}<p class="muted">No blocked users.</p>{% endfor %}
+    </section>
+
+    {% if failed_jobs is not empty %}
+    <section class="panel">
+        <h2 class="panel-title">Delivery problems</h2>
+        {% for j in failed_jobs %}
+            <p class="small"><strong>{{ j.type }}</strong> · {{ j.created_at|ago }} · {{ j.last_error }}</p>
+        {% endfor %}
+    </section>
+    {% endif %}
+{% endblock %}

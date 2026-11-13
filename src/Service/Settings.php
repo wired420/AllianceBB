@@ -16,6 +16,7 @@ final class Settings
         'site.name' => 'AllianceBB',
         'site.description' => 'A forum that shares sections with other sites.',
         'site.registration_open' => true,
+        'site.url' => '',
         'federation.mode' => 'private', // public | private | off
         'theme.name' => 'default',
         'theme.colors' => [],

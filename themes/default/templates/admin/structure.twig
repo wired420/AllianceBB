@@ -7,6 +7,7 @@
             <form method="post" action="{{ url('admin.structure.item', {id: node.id}) }}" class="node-edit" style="--depth: {{ node.depth }}">
                 {{ csrf_field() }}
                 <span class="badge {{ node.type == 'category' ? '' : 'muted-badge' }}">{{ node.depth > 0 and node.type == 'forum' and nodes|filter(n => n.id == node.parent_id and n.type == 'forum')|length ? 'sub-forum' : node.type }}</span>
+                {% if node.origin_connection_id %}<span class="badge remote-badge">cloned</span>{% endif %}
                 <input name="title" value="{{ node.title }}" aria-label="Title" required>
                 <input name="description" value="{{ node.description }}" aria-label="Description" placeholder="Description">
                 <input name="position" value="{{ node.position }}" aria-label="Position" type="number" class="tiny">

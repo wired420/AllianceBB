@@ -4,6 +4,7 @@
         {% if post.avatar_url %}<img class="avatar" src="{{ post.avatar_url }}" alt="" width="48" height="48" loading="lazy" referrerpolicy="no-referrer">
         {% else %}<span class="avatar avatar-letter" aria-hidden="true">{{ author|first|upper }}</span>{% endif %}
         <strong class="author-name">{{ author }}</strong>
+        {% if post.is_remote %}<span class="badge remote-badge" title="This person posts from another site">remote</span>{% endif %}
         {% if post.author_role in ['admin', 'moderator'] %}<span class="badge">{{ post.author_role|capitalize }}</span>{% endif %}
         {{ hook('post.author', post) }}
     </aside>
@@ -15,6 +16,8 @@
         </header>
         {{ hook('post.before', post) }}
         <div class="post-content">{{ post.body_html|raw }}</div>
+        {% if post.federation_state == 'pending' %}<p class="post-state muted">Sending to the section's home site…</p>
+        {% elseif post.federation_state == 'rejected' %}<p class="post-state rejected">Not delivered to the section's home site: {{ post.federation_error }}</p>{% endif %}
         {{ hook('post.after', post) }}
         <footer class="post-actions small">
             {% if can('post.edit', post) %}<a href="{{ url('post.edit', {id: post.id}) }}">Edit</a>{% endif %}
@@ -22,6 +25,12 @@
                 <form method="post" action="{{ url('post.delete', {id: post.id}) }}" class="inline" data-confirm="{{ post.id == topic.first_post_id ? 'Delete this whole topic?' : 'Delete this post?' }}">
                     {{ csrf_field() }}<button class="link-button danger">Delete</button>
                 </form>
+            {% endif %}
+            {% if can('post.hide', post) %}
+                <form method="post" action="{{ url('post.hide', {id: post.id}) }}" class="inline" data-confirm="Hide this post on this site?">{{ csrf_field() }}<button class="link-button">Hide here</button></form>
+            {% endif %}
+            {% if can('post.block', post) %}
+                <form method="post" action="{{ url('post.block', {id: post.id}) }}" class="inline" data-confirm="Block {{ author }}? Their past and future posts will be hidden on this site.">{{ csrf_field() }}<button class="link-button danger">Block user</button></form>
             {% endif %}
             {{ hook('post.actions', post) }}
         </footer>

@@ -2,7 +2,7 @@
 
 Self-hosted forum software where any category, forum or sub-forum can be shared live with other AllianceBB sites.
 
-> **Status:** early prototype (milestone 1). The core forum works; sharing between sites is being built next.
+> **Status:** early prototype (milestone 1). The forum and site-to-site sharing work; a Docker test kit is next.
 
 ## Features
 
@@ -12,7 +12,9 @@ Self-hosted forum software where any category, forum or sub-forum can be shared 
 - Admin panel for forums, settings, colors, themes, plugins and users
 - Plugins that can hook into, or replace, almost any part of the forum
 - Themes made of Twig templates, with colors editable in the admin panel
-- Sharing modes per site: public, private or off (federation arrives in the next milestone)
+- Share any category, forum or sub-forum with other AllianceBB sites, with posts flowing both ways in real time
+- Authors from other sites show as `user@SiteName`; moderators can hide remote posts or block remote users on their own site
+- Sharing modes per site: public (any site can connect), private (invited sites only) or off
 
 ## Stack
 
@@ -28,6 +30,18 @@ php -S localhost:8080 public/router.php
 ```
 
 Open http://localhost:8080 and the installer creates the tables and your admin account. After an update, run `bin/console migrate`.
+
+Sharing needs the background worker running alongside the web server:
+
+```sh
+php bin/console worker
+```
+
+To try two sites on one machine, run two copies on different ports with different databases, and set `ALLIANCE_ALLOW_PRIVATE=1` so they may call each other on local addresses.
+
+## How sharing works
+
+The site that owns a section is its hub. Every post in that section, written on any site, goes through the owner, which records it in the section's event log and sends a signed webhook to every site that cloned it. Those sites then fetch the new events with their key, and also check in every two minutes in case a webhook was missed. See [docs/federation.md](docs/federation.md) for the protocol.
 
 ## Plugins
 

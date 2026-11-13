@@ -1,6 +1,7 @@
 <div class="forum-row" id="node-{{ forum.id }}">
     <div class="forum-main">
         <a class="forum-title" href="{{ url('forum', {id: forum.id ~ '-' ~ forum.slug}) }}">{{ forum.title }}</a>
+        {% if forum.origin_connection_id %}<span class="badge remote-badge">Shared</span>{% endif %}
         {{ hook('forum_row.title_after', forum) }}
         {% if forum.description %}<p class="muted">{{ forum.description }}</p>{% endif %}
         {% if forum.children is not empty %}

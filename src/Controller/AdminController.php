@@ -20,15 +20,22 @@ final class AdminController extends Controller
     {
         return $this->render($ctx, $template, $data + [
             'section' => $section,
-            'admin_menu' => $this->app->hooks()->applyFilters('admin.menu', [
-                ['id' => 'dashboard', 'title' => 'Dashboard', 'url' => $this->url('admin')],
-                ['id' => 'structure', 'title' => 'Forums', 'url' => $this->url('admin.structure')],
-                ['id' => 'settings', 'title' => 'Settings', 'url' => $this->url('admin.settings')],
-                ['id' => 'appearance', 'title' => 'Appearance', 'url' => $this->url('admin.appearance')],
-                ['id' => 'plugins', 'title' => 'Plugins', 'url' => $this->url('admin.plugins')],
-                ['id' => 'users', 'title' => 'Users', 'url' => $this->url('admin.users')],
-            ], $ctx),
+            'admin_menu' => $this->app->hooks()->applyFilters('admin.menu', self::defaultMenu($this->app->router()), $ctx),
         ]);
+    }
+
+    /** @return list<array<string, string>> */
+    public static function defaultMenu(\AllianceBB\Http\Router $router): array
+    {
+        return [
+            ['id' => 'dashboard', 'title' => 'Dashboard', 'url' => $router->url('admin')],
+            ['id' => 'structure', 'title' => 'Forums', 'url' => $router->url('admin.structure')],
+            ['id' => 'sharing', 'title' => 'Sharing', 'url' => $router->url('admin.sharing')],
+            ['id' => 'settings', 'title' => 'Settings', 'url' => $router->url('admin.settings')],
+            ['id' => 'appearance', 'title' => 'Appearance', 'url' => $router->url('admin.appearance')],
+            ['id' => 'plugins', 'title' => 'Plugins', 'url' => $router->url('admin.plugins')],
+            ['id' => 'users', 'title' => 'Users', 'url' => $router->url('admin.users')],
+        ];
     }
 
     public function dashboard(Context $ctx): Response
@@ -112,6 +119,10 @@ final class AdminController extends Controller
                 $settings->set('site.description', mb_substr($ctx->request->input('site_description'), 0, 300));
                 $settings->set('site.registration_open', $ctx->request->input('registration_open') === '1');
                 $settings->set('federation.mode', $mode);
+                $url = rtrim($ctx->request->input('site_url'), '/');
+                if ($url !== '' && preg_match('#^https?://[^/\s]+#i', $url)) {
+                    $settings->set('site.url', $url);
+                }
                 $this->app->hooks()->doAction('admin.settings.saved', $ctx);
                 $this->app->touchConfig();
                 $ctx->flash('Settings saved.');

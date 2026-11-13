@@ -126,3 +126,16 @@ tr.banned td { opacity: .6; }
   .admin-menu { grid-auto-flow: column; overflow-x: auto; }
   .table { display: block; overflow-x: auto; }
 }
+
+/* Sharing */
+.copy-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
+.inline-form { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+.inline-form label { flex: 1 1 200px; }
+.site-card { border-top: 1px solid var(--abb-border); padding: 8px 0 12px; display: grid; gap: 8px; }
+.site-card .list-row { border-top: 0; }
+.code-box { display: grid; gap: 8px; background: var(--abb-bg); padding: 12px; border-radius: 6px; }
+.code-box textarea { font-family: ui-monospace, monospace; font-size: .8rem; }
+.post-state { font-size: .8rem; margin-top: 6px; }
+.post-state.rejected { color: var(--abb-danger); }
+hr { border: 0; border-top: 1px solid var(--abb-border); margin: 16px 0; }
+@media (max-width: 760px) { .copy-row { grid-template-columns: 1fr; } }

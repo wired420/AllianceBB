@@ -6,6 +6,8 @@ namespace AllianceBB;
 
 use AllianceBB\Controller\AdminController;
 use AllianceBB\Controller\AuthController;
+use AllianceBB\Controller\FederationApiController;
+use AllianceBB\Controller\SharingController;
 use AllianceBB\Controller\ForumController;
 use AllianceBB\Controller\InstallController;
 use AllianceBB\Controller\SystemController;
@@ -13,6 +15,9 @@ use AllianceBB\Core\Container;
 use AllianceBB\Core\Context;
 use AllianceBB\Core\Database;
 use AllianceBB\Core\Hooks;
+use AllianceBB\Federation\Federation;
+use AllianceBB\Federation\HttpClient;
+use AllianceBB\Federation\Jobs;
 use AllianceBB\Http\HttpException;
 use AllianceBB\Http\Request;
 use AllianceBB\Http\Response;
@@ -59,6 +64,10 @@ final class App
         $app = new self($rootDir);
         if ($app->settings()->isInstalled()) {
             $app->get(PluginManager::class)->loadEnabled($app);
+            // Sharing is built on the same hooks plugins use.
+            $federation = $app->get(Federation::class);
+            $federation->registerHooks();
+            $federation->registerJobs();
         }
         $app->registerRoutes();
         $app->hooks->doAction('app.booted', $app);
@@ -100,6 +109,18 @@ final class App
         ));
         $c->set(Themes::class, fn () => new Themes($this->rootDir . '/themes'));
         $c->set(View::class, fn (Container $c) => new View($this->rootDir, $c));
+        $c->set(Jobs::class, fn (Container $c) => new Jobs($c->get(Database::class)));
+        $c->set(HttpClient::class, fn () => new HttpClient());
+        $c->set(Federation::class, fn (Container $c) => new Federation(
+            $c->get(Database::class),
+            $c->get(Settings::class),
+            $this->hooks,
+            $c->get(Nodes::class),
+            $c->get(Posts::class),
+            $c->get(Broadcaster::class),
+            $c->get(Jobs::class),
+            $c->get(HttpClient::class),
+        ));
         $c->set(PluginManager::class, fn (Container $c) => new PluginManager($this->rootDir . '/plugins', $c->get(Database::class)));
     }
 
@@ -135,6 +156,23 @@ final class App
         $r->add(['GET', 'POST'], '/admin/appearance', $admin->appearance(...), 'admin.appearance');
         $r->add(['GET', 'POST'], '/admin/plugins', $admin->plugins(...), 'admin.plugins');
         $r->add(['GET', 'POST'], '/admin/users', $admin->users(...), 'admin.users');
+
+        $sharing = new SharingController($this);
+        $r->add(['GET', 'POST'], '/admin/sharing', $sharing->page(...), 'admin.sharing');
+        $r->post('/post/{id:\d+}/hide', $sharing->hide(...), 'post.hide');
+        $r->post('/post/{id:\d+}/block', $sharing->block(...), 'post.block');
+
+        $api = new FederationApiController($this);
+        $g = '{guid:[0-9a-f-]+}';
+        $r->get(Federation::API . '/info', $api->info(...), 'api.info');
+        $r->post(Federation::API . '/register', $api->register(...), 'api.register');
+        $r->post(Federation::API . '/subscribe', $api->subscribe(...), 'api.subscribe');
+        $r->post(Federation::API . '/webhook', $api->webhook(...), 'api.webhook');
+        $r->get(Federation::API . "/nodes/$g/events", $api->events(...), 'api.events');
+        $r->post(Federation::API . "/nodes/$g/unsubscribe", $api->unsubscribe(...), 'api.unsubscribe');
+        $r->post(Federation::API . "/nodes/$g/topics", $api->topics(...), 'api.topics');
+        $r->post(Federation::API . "/nodes/$g/posts", $api->posts(...), 'api.posts');
+        $r->post(Federation::API . "/nodes/$g/posts/{post:[0-9a-f-]+}/{action:edit|delete}", $api->change(...), 'api.change');
 
         $system = new SystemController($this);
         $r->get('/live/poll', $system->livePoll(...), 'live.poll');

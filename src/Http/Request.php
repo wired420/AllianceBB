@@ -28,6 +28,8 @@ final class Request
         public readonly string $scheme = 'http',
         public readonly string $host = 'localhost',
         public readonly string $ip = '127.0.0.1',
+        /** raw request target, path plus query string, as the client sent it */
+        public readonly string $target = '/',
     ) {
     }
 
@@ -58,6 +60,7 @@ final class Request
             scheme: $scheme,
             host: (string) ($headers['host'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost'),
             ip: (string) ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'),
+            target: (string) ($_SERVER['REQUEST_URI'] ?? '/'),
         );
     }
 
