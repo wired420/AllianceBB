@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Builds dist/alliancebb-<version>.zip and .tar.gz (with vendor/, no dev tools)
+# plus .sha256 files, from the committed files at HEAD. Admins upload either
+# package under Admin › Updates, or the updater fetches it from a GitHub release.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+version=$(sed -n "s/.*const VERSION = '\([^']*\)'.*/\1/p" src/App.php)
+[ -n "$version" ] || { echo "Could not read VERSION from src/App.php" >&2; exit 1; }
+name="alliancebb-$version"
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+git archive --format=tar --prefix="$name/" HEAD | tar -x -C "$work"
+(cd "$work/$name" && composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --quiet)
+find "$work/$name/vendor" -name .git -type d -prune -exec rm -rf {} +
+rm -rf "$work/$name/tests" "$work/$name/phpunit.xml" "$work/$name/.github"
+
+mkdir -p dist
+rm -f "dist/$name".*
+(cd "$work" && zip -qr9 "$OLDPWD/dist/$name.zip" "$name" && tar -czf "$OLDPWD/dist/$name.tar.gz" "$name")
+for f in "dist/$name.zip" "dist/$name.tar.gz"; do
+    (cd dist && sha256sum "$(basename "$f")" > "$(basename "$f").sha256")
+done
+ls -lh dist/"$name".*

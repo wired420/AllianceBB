@@ -277,7 +277,12 @@ final class AdminController extends Controller
     private function uploadedFile(Context $ctx, string $field): string
     {
         $file = $ctx->request->files[$field] ?? null;
-        if (!is_array($file) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) $file['tmp_name'])) {
+        $error = is_array($file) ? (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) : UPLOAD_ERR_NO_FILE;
+        if ($error === UPLOAD_ERR_INI_SIZE || $error === UPLOAD_ERR_FORM_SIZE) {
+            throw new InvalidArgumentException('That file is larger than this server accepts (upload_max_filesize is '
+                . ini_get('upload_max_filesize') . '). Raise upload_max_filesize and post_max_size in php.ini.');
+        }
+        if ($error !== UPLOAD_ERR_OK || !is_uploaded_file((string) $file['tmp_name'])) {
             throw new InvalidArgumentException('Choose a file to upload.');
         }
         return (string) $file['tmp_name'];

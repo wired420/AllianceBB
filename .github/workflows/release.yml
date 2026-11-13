@@ -1,0 +1,32 @@
+name: Release
+
+# Push a tag such as v0.1.1 (matching App::VERSION) to publish a release that
+# Admin › Updates can install.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_pgsql, zip, intl
+          tools: composer:v2
+      - name: Check the tag matches App::VERSION
+        run: |
+          version=$(sed -n "s/.*const VERSION = '\([^']*\)'.*/\1/p" src/App.php)
+          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME does not match VERSION $version"; exit 1; }
+      - run: composer install --prefer-dist --no-interaction
+      - run: vendor/bin/phpunit
+      - run: bin/build-release
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

@@ -148,14 +148,7 @@ final class Updater
         } elseif (str_ends_with($lower, '.tar.gz') || str_ends_with($lower, '.tgz')) {
             $tar = $staging . '/package.tar.gz';
             copy($packagePath, $tar);
-            $phar = new PharData($tar);
-            foreach (new \RecursiveIteratorIterator($phar) as $file) {
-                $rel = substr((string) $file->getPathname(), strlen('phar://' . $tar) + 1);
-                if (str_contains($rel, '..')) {
-                    throw new InvalidArgumentException('The package contains unsafe paths.');
-                }
-            }
-            $phar->extractTo($staging, null, true);
+            $this->extractTar($tar, $staging);
             unlink($tar);
         } else {
             throw new InvalidArgumentException('Upload a .zip or .tar.gz package.');
@@ -169,6 +162,56 @@ final class Updater
             return $dirs[0];
         }
         throw new InvalidArgumentException('That package does not look like AllianceBB (no src/App.php).');
+    }
+
+    /** Uses the system tar when there is one, since PharData fails on long paths. */
+    private function extractTar(string $tar, string $staging): void
+    {
+        $bin = function_exists('proc_open') ? trim((string) shell_exec('command -v tar 2>/dev/null')) : '';
+        if ($bin === '') {
+            $phar = new PharData($tar);
+            foreach (new \RecursiveIteratorIterator($phar) as $file) {
+                $rel = substr((string) $file->getPathname(), strlen('phar://' . $tar) + 1);
+                if (str_contains($rel, '..')) {
+                    throw new InvalidArgumentException('The package contains unsafe paths.');
+                }
+            }
+            $phar->extractTo($staging, null, true);
+            return;
+        }
+        [$code, $list] = self::runCommand([$bin, '-tzf', $tar]);
+        if ($code !== 0) {
+            throw new InvalidArgumentException('That file is not a valid .tar.gz.');
+        }
+        foreach (explode("\n", trim($list)) as $name) {
+            if (str_starts_with($name, '/') || preg_match('#(^|/)\.\.(/|$)#', $name) || str_contains($name, '\\')) {
+                throw new InvalidArgumentException('The package contains unsafe paths.');
+            }
+        }
+        [$code, , $err] = self::runCommand([$bin, '-xzf', $tar, '-C', $staging, '--no-same-owner', '--no-same-permissions', '--exclude=package.tar.gz']);
+        if ($code !== 0) {
+            throw new InvalidArgumentException('Could not unpack that package: ' . trim($err));
+        }
+        $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($staging, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::SELF_FIRST);
+        foreach ($it as $file) {
+            if ($file->isLink()) {
+                throw new InvalidArgumentException('The package contains links, which are not allowed.');
+            }
+        }
+    }
+
+    /** @param list<string> $cmd @return array{int, string, string} */
+    private static function runCommand(array $cmd): array
+    {
+        $proc = proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+        if (!is_resource($proc)) {
+            throw new RuntimeException('Could not run ' . $cmd[0] . '.');
+        }
+        $out = (string) stream_get_contents($pipes[1]);
+        $err = (string) stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        return [proc_close($proc), $out, $err];
     }
 
     private function checkPackage(string $root): string
