@@ -35,6 +35,7 @@ final class AdminController extends Controller
             ['id' => 'appearance', 'title' => 'Appearance', 'url' => $router->url('admin.appearance')],
             ['id' => 'plugins', 'title' => 'Plugins', 'url' => $router->url('admin.plugins')],
             ['id' => 'users', 'title' => 'Users', 'url' => $router->url('admin.users')],
+            ['id' => 'updates', 'title' => 'Updates', 'url' => $router->url('admin.updates')],
         ];
     }
 
@@ -220,6 +221,57 @@ final class AdminController extends Controller
             return Response::redirect($this->url('admin.users'));
         }
         return $this->adminPage($ctx, 'admin/users.twig', 'users', ['users' => $users->list(200)]);
+    }
+
+    public function updates(Context $ctx): Response
+    {
+        $this->requireAdmin($ctx);
+        $updater = new \AllianceBB\Update\Updater($this->app);
+        if ($ctx->request->isPost()) {
+            @set_time_limit(600);
+            try {
+                switch ($ctx->request->input('action')) {
+                    case 'github':
+                        $version = $updater->installLatest();
+                        $ctx->flash("Updated to AllianceBB $version.");
+                        break;
+                    case 'upload':
+                        $file = $ctx->request->files['package'] ?? [];
+                        $version = $updater->install($this->uploadedFile($ctx, 'package'), (string) ($file['name'] ?? ''));
+                        $ctx->flash("Updated to AllianceBB $version.");
+                        break;
+                    case 'rollback':
+                        $version = $updater->rollback($ctx->request->input('backup'));
+                        $ctx->flash("Rolled back to AllianceBB $version.");
+                        break;
+                    default:
+                        throw new HttpException(400);
+                }
+            } catch (HttpException $e) {
+                throw $e;
+            } catch (\Throwable $e) {
+                $ctx->flash($e->getMessage(), 'error');
+            }
+            return Response::redirect($this->url('admin.updates'));
+        }
+        $latest = null;
+        $checkError = null;
+        if ($ctx->request->query('check') === '1') {
+            try {
+                $latest = $updater->latestRelease();
+                $checkError = $latest === null ? 'No releases have been published on GitHub yet.' : null;
+            } catch (\Throwable $e) {
+                $checkError = $e->getMessage();
+            }
+        }
+        return $this->adminPage($ctx, 'admin/updates.twig', 'updates', [
+            'version' => \AllianceBB\App::VERSION,
+            'latest' => $latest,
+            'newer' => $latest !== null && version_compare($latest['version'], \AllianceBB\App::VERSION, '>'),
+            'check_error' => $checkError,
+            'backups' => $updater->backups(),
+            'repo' => \AllianceBB\Update\Updater::REPO,
+        ]);
     }
 
     private function uploadedFile(Context $ctx, string $field): string

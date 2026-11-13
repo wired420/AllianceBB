@@ -373,6 +373,7 @@ final class Federation
     /** @param array<string, mixed> $root */
     private function emitToRoot(array $root, string $type, array $payload): void
     {
+        $payload = (array) $this->hooks->applyFilters('federation.event_payload', $payload, $type, $root);
         $seq = (int) $this->db->value(
             'INSERT INTO fed_events (root_node_id, type, payload) VALUES (?, ?, ?::jsonb) RETURNING seq',
             [$root['id'], $type, json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)],
@@ -387,6 +388,7 @@ final class Federation
                 'connection_id' => (int) $sub['id'], 'root_guid' => $root['guid'], 'latest_seq' => $seq,
             ], 'webhook:' . $sub['id'] . ':' . $root['id']);
         }
+        $this->hooks->doAction('federation.event_emitted', $root, $type, $payload, $seq);
     }
 
     /** @return list<array<string, mixed>> the section and everything under it, parents first */
@@ -1006,6 +1008,7 @@ final class Federation
     /** @param array<string, mixed> $payload */
     private function applyEvent(array $conn, string $rootGuid, string $type, array $payload): void
     {
+        $this->hooks->doAction('federation.event_received', $conn, $rootGuid, $type, $payload);
         switch ($type) {
             case 'structure':
                 $this->applyStructure($conn, $rootGuid, (array) ($payload['nodes'] ?? []));

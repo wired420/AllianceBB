@@ -1,0 +1,29 @@
+# One AllianceBB site. In the two-site test kit a front proxy handles HTTPS,
+# so this listens on plain HTTP inside the Docker network.
+{
+	{$CADDY_GLOBAL_OPTIONS}
+	frankenphp {
+		worker {
+			file /app/public/index.php
+			num {$PHP_WORKERS:4}
+		}
+	}
+}
+
+{$SERVER_NAME::80} {
+	root * /app/public
+	encode zstd br gzip
+
+	# Live updates: the forum publishes here, browsers subscribe over server-sent events.
+	mercure {
+		publisher_jwt {env.MERCURE_PUBLISHER_JWT_KEY}
+		subscriber_jwt {env.MERCURE_SUBSCRIBER_JWT_KEY}
+		anonymous
+	}
+
+	# Never serve code or data folders directly.
+	@blocked path /vendor/* /src/* /var/* /.env /composer.*
+	respond @blocked 404
+
+	php_server
+}

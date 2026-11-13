@@ -1,0 +1,108 @@
+# Two AllianceBB sites on one machine, for testing sharing between them.
+#   alpha: https://${ALPHA_DOMAIN}     beta: https://${BETA_DOMAIN}
+# A front Caddy proxy gets HTTPS certificates for both subdomains.
+
+x-site: &site
+  build:
+    context: ../..
+  image: alliancebb:local
+  restart: unless-stopped
+  depends_on:
+    db:
+      condition: service_healthy
+
+x-worker: &worker
+  image: alliancebb:local
+  restart: unless-stopped
+  command: ["php", "/app/bin/console", "worker"]
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      ALPHA_DOMAIN: ${ALPHA_DOMAIN}
+      BETA_DOMAIN: ${BETA_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile.proxy:/etc/caddy/Caddyfile:ro
+      - proxy_data:/data
+      - proxy_config:/config
+    depends_on: [alpha, beta]
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: alliancebb
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alliancebb"]
+      interval: 3s
+      retries: 20
+
+  alpha:
+    <<: *site
+    environment: &alpha_env
+      SERVER_NAME: ":80"
+      CADDY_GLOBAL_OPTIONS: "auto_https off"
+      APP_URL: https://${ALPHA_DOMAIN}
+      DATABASE_URL: postgres://alliancebb:${DB_PASSWORD}@db:5432/alliancebb_alpha
+      INSTALL_TOKEN: ${INSTALL_TOKEN}
+      MERCURE_PUBLISH_URL: http://localhost/.well-known/mercure
+      MERCURE_PUBLIC_URL: /.well-known/mercure
+      MERCURE_PUBLISHER_JWT_KEY: ${ALPHA_MERCURE_KEY}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${ALPHA_MERCURE_KEY}
+    volumes:
+      - alpha_app:/app
+
+  alpha-worker:
+    <<: *worker
+    environment:
+      <<: *alpha_env
+      SKIP_MIGRATE: "1"
+    volumes:
+      - alpha_app:/app
+    depends_on: [alpha]
+
+  beta:
+    <<: *site
+    environment: &beta_env
+      SERVER_NAME: ":80"
+      CADDY_GLOBAL_OPTIONS: "auto_https off"
+      APP_URL: https://${BETA_DOMAIN}
+      DATABASE_URL: postgres://alliancebb:${DB_PASSWORD}@db:5432/alliancebb_beta
+      INSTALL_TOKEN: ${INSTALL_TOKEN}
+      MERCURE_PUBLISH_URL: http://localhost/.well-known/mercure
+      MERCURE_PUBLIC_URL: /.well-known/mercure
+      MERCURE_PUBLISHER_JWT_KEY: ${BETA_MERCURE_KEY}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${BETA_MERCURE_KEY}
+    volumes:
+      - beta_app:/app
+
+  beta-worker:
+    <<: *worker
+    environment:
+      <<: *beta_env
+      SKIP_MIGRATE: "1"
+    volumes:
+      - beta_app:/app
+    depends_on: [beta]
+
+volumes:
+  db_data:
+  proxy_data:
+  proxy_config:
+  alpha_app:
+  beta_app:

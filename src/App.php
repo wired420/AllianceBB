@@ -156,6 +156,7 @@ final class App
         $r->add(['GET', 'POST'], '/admin/appearance', $admin->appearance(...), 'admin.appearance');
         $r->add(['GET', 'POST'], '/admin/plugins', $admin->plugins(...), 'admin.plugins');
         $r->add(['GET', 'POST'], '/admin/users', $admin->users(...), 'admin.users');
+        $r->add(['GET', 'POST'], '/admin/updates', $admin->updates(...), 'admin.updates');
 
         $sharing = new SharingController($this);
         $r->add(['GET', 'POST'], '/admin/sharing', $sharing->page(...), 'admin.sharing');

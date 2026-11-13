@@ -62,16 +62,7 @@ return function (AllianceBB\App $app): void {
 };
 ```
 
-What a plugin can do:
-
-| Kind | Examples |
-| --- | --- |
-| Render hooks: filters named `render.<spot>` that add HTML | `head`, `header.after`, `nav.before`, `footer`, `body.end`, `post.before`, `post.after`, `post.author`, `post.meta`, `post.actions`, `topic.head`, `forum.head`, `index.before`, `reply_form.after`, `account_form`, `admin.dashboard` |
-| Actions | `app.booted`, `routes`, `request.start`, `user.registered`, `topic.created`, `post.created`, `post.edited`, `post.deleted`, `topic.locked`, `topic.moved`, `node.created`, `account.saved`, `admin.settings.saved`, `console` |
-| Filters | `post.body`, `topic.title`, `markup.before`, `markup.after`, `permission`, `user.register.errors`, `admin.menu`, `view.template`, `view.data`, `response` |
-| Templates | A `templates/` folder becomes the `@plugin-name` namespace; `$app->view()->addOverridePath()` overrides any theme template |
-| Database | Numbered `.sql` files in `migrations/` run when the plugin is enabled |
-| Services | `$app->container()->override()` replaces any core service |
+Plugins can add HTML to about 30 spots on the page, react to every change (posts, topics, users, forum structure, federation), filter text, permissions, templates and responses, add pages and console commands, run background jobs, and replace core services. [docs/plugins.md](docs/plugins.md) lists every hook with its arguments.
 
 Plugins run with full access to the forum, so only install ones you trust.
 

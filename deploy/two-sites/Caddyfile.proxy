@@ -1,0 +1,15 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$ALPHA_DOMAIN} {
+	reverse_proxy alpha:80 {
+		flush_interval -1
+	}
+}
+
+{$BETA_DOMAIN} {
+	reverse_proxy beta:80 {
+		flush_interval -1
+	}
+}

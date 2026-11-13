@@ -1,0 +1,38 @@
+{% extends 'admin/layout.twig' %}
+{% block admin %}
+    <section class="panel">
+        <h1 class="panel-title">Updates</h1>
+        <p>You're running <strong>AllianceBB {{ version }}</strong>.</p>
+        {% if check_error %}<div class="flash flash-error">{{ check_error }}</div>{% endif %}
+        {% if latest %}
+            {% if newer %}
+                <p>Version <strong>{{ latest.version }}</strong> is available{% if latest.published_at %}, released {{ latest.published_at|ago }}{% endif %}.</p>
+                {% if latest.notes %}<details><summary>What's new</summary><pre class="release-notes">{{ latest.notes }}</pre></details>{% endif %}
+                <form method="post" class="form-actions">{{ csrf_field() }}
+                    <button class="button" name="action" value="github" data-confirm="Update to {{ latest.version }}? The forum and database are backed up first.">Update to {{ latest.version }}</button>
+                </form>
+            {% else %}
+                <p class="muted">You have the latest release ({{ latest.version }}).</p>
+            {% endif %}
+        {% else %}
+            <p><a class="button secondary" href="?check=1">Check GitHub for updates</a> <span class="muted small">from github.com/{{ repo }}</span></p>
+        {% endif %}
+    </section>
+    <section class="panel">
+        <h2 class="panel-title">Upload a package</h2>
+        <p class="muted small">Use a release package (alliancebb-x.y.z.zip or .tar.gz). The forum and database are backed up before anything changes. Plugins, extra themes and settings are kept.</p>
+        <form method="post" enctype="multipart/form-data" class="stack">{{ csrf_field() }}
+            <input type="file" name="package" accept=".zip,.tar.gz,.tgz" required>
+            <button class="button" name="action" value="upload" data-confirm="Install this package?">Upload and update</button>
+        </form>
+    </section>
+    <section class="panel">
+        <h2 class="panel-title">Backups</h2>
+        {% for b in backups %}
+            <form method="post" class="list-row">{{ csrf_field() }}<input type="hidden" name="backup" value="{{ b.id }}">
+                <div>Before updating {{ b.from }} → {{ b.to }} <span class="muted small">{{ b.at|date('M j, Y H:i') }}{% if not b.has_database %} · code only, database was not backed up{% endif %}</span></div>
+                <button class="button small secondary" name="action" value="rollback" data-confirm="Roll back to {{ b.from }}?{% if b.has_database %} Posts made since this update will be lost.{% endif %}">Roll back to {{ b.from }}</button>
+            </form>
+        {% else %}<p class="muted">No updates installed yet.</p>{% endfor %}
+    </section>
+{% endblock %}

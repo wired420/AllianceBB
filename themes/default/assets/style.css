@@ -139,3 +139,4 @@ tr.banned td { opacity: .6; }
 .post-state.rejected { color: var(--abb-danger); }
 hr { border: 0; border-top: 1px solid var(--abb-border); margin: 16px 0; }
 @media (max-width: 760px) { .copy-row { grid-template-columns: 1fr; } }
+.release-notes { white-space: pre-wrap; font-size: .85rem; background: var(--abb-bg); padding: 12px; border-radius: 6px; }
